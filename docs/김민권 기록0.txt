@@ -1,0 +1,86 @@
+* 프로젝트 진행과정
+1. 원본이미지와 json라벨 확인
+2. 클래스별 이미지 개수 확인
+3. 이미지 경로와 라벨을 metadata.csv로 생성
+4. 데이터를 train, validation, test로 분리
+5. 이미지 크기 조정과 정규화
+6. Train 데이터에 데이터 증강적용
+7. MobileNetV2 모델 학습
+8. Test 데이터로 최종성능평가
+
+사용기술
+- Python
+- PyTorch
+- pandas
+- pillow
+- Matplotilb
+- MobileNetV2
+
+파일별 역할
+1. create_metadata.py
+	- 원본 이미지와 json라벨 읽기
+	- 이미지 경로와 등급 정보를 정리
+	- metadata.csv파일 생성
+
+2. check_data.py
+	- metadata.csv를 불러옴
+	- 필요한 컬럼이 존재하는지 확인
+	- 비어 있는 데이터나 잘못된 값이 있는지 확인(결측치)
+	- 이미지 경로나 라벨에 문제가 없는지 확인
+	- 클래스별 데이터 개수 등을 확인 (우수, 일반, 불량)
+	- 같은 group_id에 서로 다른 등급이 들어가 있지 않은지 확인
+
+3. visual_check.py
+	- 등급별 이미지 경로를 모음
+	- 각 등급에서 이미지 무작위 선택
+	- 선택한 이미지와 등급을 화면에 출력
+	- 라벨과 실제 이미지가 올바르게 연결되었는지 눈으로 확인
+
+4. split_data.py
+	- 검사가 끝난 metadata.csv를 불러옴
+	- 데이터를 train, validation, test로 분리
+	- group_id를 가진 이미지들이 섞이지않게 그룹단위로 분리
+	- 원본 등급 번호 1,2,3,을 모델용 라벨0,1,2로 변환
+	- 변환한값을 model_label컬럼에 저장
+	- 분리결과를 metadata_split.csv로 저장
+
+5. preprocess_data.py
+	- split_data.py가 만든 metadata_split.csv를 불러옴
+	- 이미지를 열어 RGB형식으로 변환
+	- 이미지 크기를 MobileNetV2 입력 크기에 맞게 조정(224,224)
+	- 이미지를 PyTorch 텐서로 변환
+	- MobileNetV2의 사전 학습 조건에 맞게 이미지 정규화
+	- Train 이미지에만 데이터 증강 적용
+	- BuildingDataset을 이용해 이미지와 정답 라벨을 가져오는 방법을 정의
+	- DataLoader를 이용해 이미지를 일정한 개수씩 모델에 전달 준비(16)
+	- train_loader, validation_loader, test_loader를 만듬
+
+6. train_model.py
+	- preprocess_data.py에서 만든 train_loader와 validation_loader를 가져옴
+	- 사전학습된 모델을 불러옴
+	- 기존 모델의 특징 추출부분을 기본적으로 고정 
+	- 마지막 분류층을 우수 보통 불량 3개 클래스를 출력하도록 변결
+	- Train 데이터로 모델 학습
+	- Validation 데이터로 매학습 단계의 성능 확인
+	- 손실값과 정확도를 계산
+	- Validation 정확도가 가장 좋은 모델을 저장
+	- 미세조정 전의 모델을 만듬
+
+7. fine_tune_model.py(실행하기전 ecaluate_model.py실행후 미세조정 전 후 모델 비교하는게 좋음)
+	- train_model.py에서 저장한 기본모델 불러옴
+	- 고정돼 있던 모델 특징 추출층 중 일부를 다시 학습 가능하게 만듬
+	- 현재 노후 건물 데이터에 더 잘 맞도록 가중치를 추가 학습
+	- 기본 학습보다 작은 학습률을 사용
+	- Train 데이터로 미세조정을 진행
+	- Validation 정확도 확인
+	- 성능이 좋아지지 않으면 학습을 멈추는 조기 종료 적용(3번까지)
+	- Validation 성능이 가장좋은 미세조정 모델 저장
+8. evaluate_model.py
+	- 학습과 미세조정이 끝난 최종 모델 불러옴
+	- preprocess_data.py에서 만든 test_loader를 가져옴
+	- 학습과 검증에 사용하지 않은 Test 이미지를 모델에 입력
+	- 모델의 예측 결과와 실제 정답을 비교
+	- 전체 Test정확도를 계산
+	- 등급별 Precision, Recall, F1-score를 계산 (정밀도, 재현율, 두 값의 균형)
+	- 혼동행렬을 만들어 어떤 등급을 어떤등급으로 잘못 예측했는지 확인(우리는 일반을 불량으로 많이 예측)
+	- 최종모델 성능 출력, 평가결과 저장
