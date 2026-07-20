@@ -5,8 +5,10 @@ from pathlib import Path
 
 project_dir = Path(__file__).resolve().parent.parent
 
-image_dir = project_dir / "data" / "raw" / "images"
-labels_dir = project_dir / "data" / "raw" / "labels"
+raw_dir = Path(r"D:\hn_old-building_raw\raw")
+
+image_dir = raw_dir / "images"
+labels_dir = raw_dir / "labels"
 
 processed_dir = project_dir / "data" / "processed"
 metadata_path = processed_dir / "metadata.csv"
@@ -84,14 +86,12 @@ for json_path in json_files:
     if image_path is None:
         continue
 
-    relative_image_path = image_path.relative_to(
-        project_dir
-    ).as_posix()
+    saved_image_path = image_path.resolve().as_posix()
 
     group_id = source_data_id.rsplit("-", 1)[0]
 
     metadata_rows.append({
-        "image_path": relative_image_path,
+        "image_path": saved_image_path,
         "source_data_id": source_data_id,
         "class_id": class_id,
         "model_label": model_labels[class_id],

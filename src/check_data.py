@@ -3,8 +3,10 @@ from pathlib import Path
 
 project_dir = Path(__file__).resolve().parent.parent
 
-image_dir = project_dir / "data" / "raw" / "images"
-labels_dir = project_dir / "data" / "raw" / "labels"
+raw_dir = Path(r"D:\hn_old-building_raw\raw")
+
+image_dir = raw_dir / "images"
+labels_dir = raw_dir / "labels"
 
 class_names = {
     "1": "우수",

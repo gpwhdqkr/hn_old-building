@@ -11,9 +11,10 @@ plt.rcParams["font.family"] = "Malgun Gothic"
 plt.rcParams["axes.unicode_minus"] = False
 
 project_dir = Path(__file__).resolve().parent.parent
+raw_dir = Path(r"D:\hn_old-building_raw\raw")
 
-image_dir = project_dir / "data" / "raw" / "images"
-labels_dir = project_dir / "data" / "raw" / "labels"
+image_dir = raw_dir / "images"
+labels_dir = raw_dir / "labels"
 
 class_names = {
     "1": "우수",
@@ -24,7 +25,29 @@ class_names = {
 #등급별 이미지 경로 저장 변수
 images_by_class = defaultdict(list)
 
-json_files = list(labels_dir.glob("*.json"))
+#등급마다 몇장을 볼 것 인지
+sample_count = 5
+
+random.seed(42)
+
+json_files = list(labels_dir.rglob("*.json"))
+
+random.shuffle(json_files)
+
+image_paths = [
+    image_path
+    for image_path in image_dir.rglob("*")
+    if image_path.suffix.lower() in {
+        ".jpg",
+        ".jpeg",
+        ".png"
+    }
+]
+
+image_by_name = {}
+
+for image_path in image_paths:
+    image_by_name[image_path.stem] = image_path
 
 for json_path in json_files:
     with json_path.open("r", encoding="utf-8") as json_file:
@@ -58,15 +81,18 @@ for json_path in json_files:
     if class_id not in class_names:
         continue
 
-    image_path = image_dir / f"{source_data_id}.jpg"
+    image_path = image_by_name.get(source_data_id)
 
-    if image_path.exists():
-        images_by_class[class_id].append(image_path)
+    if image_path is None:
+        continue
 
-random.seed(42)
+    images_by_class[class_id].append(image_path)
 
-#등급마다 몇장을 볼 것 인지
-sample_count = 5
+    if all(
+    len(images_by_class[class_id]) >= sample_count
+    for class_id in class_names
+    ):
+        break
 
 figure, axes = plt.subplots(
     3,
