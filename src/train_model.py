@@ -66,8 +66,15 @@ model.classifier[1] = nn.Linear(
 # 모델을 cpu 또는 GPU로 이동
 model = model.to(device)
 
-# 예측과 정답의 차이르 계산하는 손실함수
-loss_function = nn.CrossEntropyLoss()
+class_weights = torch.tensor(
+    [3.79,2.95,0.42],
+    dtype=torch.float32,
+    device=device
+)
+
+loss_function = nn.CrossEntropyLoss(
+    weight = class_weights
+)
 
 # 마지막 분류 계층만 학습하도록 설정
 optimizer = Adam(
@@ -76,7 +83,7 @@ optimizer = Adam(
 )
 
 #처음에 3회로 코드정상작동 확인 
-num_epochs = 12
+num_epochs = 1
 
 # 가장 높았던 Validation정확도
 best_validation_accuracy = -1.0

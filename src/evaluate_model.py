@@ -51,8 +51,7 @@ checkpoint = torch.load(
 saved_epoch = checkpoint.get(
     "fine_tune_epoch",
     checkpoint.get(
-        "fine_furn_equch",
-        checkpoint.get("eqoch", "정보없음")
+       "eqoch", "정보없음"
     )
 )
 

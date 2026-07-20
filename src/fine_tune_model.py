@@ -79,8 +79,15 @@ for parameter in model.features[-1].parameters():
 
 model = model.to(device)
 
-#손실 함수와 옵티마이저
-loss_function = nn.CrossEntropyLoss()
+class_weights = torch.tensor(
+    [3.79,2.95,0.42],
+    dtype=torch.float32,
+    device=device
+)
+
+loss_function = nn.CrossEntropyLoss(
+    weight = class_weights
+)
 
 # 특징 추출 블록은 아주 조금 수정하고 분류기는 그보다 조금 더 크게 수정한다
 optimizer = Adam(

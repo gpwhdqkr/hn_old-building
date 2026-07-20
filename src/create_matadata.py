@@ -25,9 +25,23 @@ model_labels = {
     "3": 2
 }
 
+json_files = sorted(labels_dir.rglob("*.json"))
+
+image_paths = [
+    image_path for image_path in image_dir.rglob("*")
+    if image_path.suffix.lower() in {
+        ".jpg", ".jpeg", ".png"
+    }
+]
+
+print("찾은 이미지 수:", len(image_paths))
+print("찾은 JSON 수:", len(json_files))
+
 metadata_rows = []
 
-json_files = sorted(labels_dir.glob("*.json"))
+image_by_name = {}
+for image_path in image_paths:
+    image_by_name[image_path.stem] = image_path
 
 for json_path in json_files:
     with json_path.open(
@@ -65,9 +79,9 @@ for json_path in json_files:
     if class_id not in class_name:
         continue
 
-    image_path = image_dir / f"{source_data_id}.jpg"
+    image_path = image_by_name.get(source_data_id)
 
-    if not image_path.exists():
+    if image_path is None:
         continue
 
     relative_image_path = image_path.relative_to(

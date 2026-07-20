@@ -22,9 +22,22 @@ invalid_class_files = []
 invalid_json_files = []
 thermal_files = [] 
 
-json_files = list(labels_dir.glob("*.json"))
+json_files = list(labels_dir.rglob("*.json"))
 print(f"찾은 json 파일 수 : {len(json_files)}개")
 
+image_paths = [
+            image_path for image_path in image_dir.rglob("*")
+            if image_path.suffix.lower() in {
+                ".jpg",".jpeg",".png"
+            }
+        ]
+image_by_name = {}
+
+for image_path in image_paths:
+    image_by_name[image_path.stem] = image_path
+
+print(f"찾은 이미지 파일 수 : {len(image_paths)}개")
+   
 import json
 
 for json_path in json_files:
@@ -47,7 +60,11 @@ for json_path in json_files:
             continue
         
         # json 대응 하는 jpg 경로
-        image_path = image_dir / f"{source_data_id}.jpg"
+        image_path = image_by_name.get(source_data_id)
+
+        if image_path is None:
+            missing_images.append(source_data_id)
+            continue
 
         # 대응하는 이미지 없을시 기록
         if not image_path.exists():
@@ -119,7 +136,7 @@ if empty_annotations:
 if invalid_class_files:
     print("\nClass_id에 문제가 있는 Json")
 
-    for file_name in invalid_class_file[:10]:
+    for file_name in invalid_class_files[:10]:
         print(f"-{file_name}")
 
 if invalid_json_files:
