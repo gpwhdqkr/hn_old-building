@@ -1,0 +1,55 @@
+{
+    "Raw_Data_Info": {
+        "Acknowledge": "2002",
+        "Copyrighter": "㈜미디어그룹사람과숲",
+        "Date": "2021-11-16",
+        "Equipment": "일반",
+        "Exposure_Time": "0.0052083333",
+        "F_Stop": "169/100",
+        "File_Extension": "mp4",
+        "FPS": "30",
+        "Inspection_Distance": "131",
+        "ISO_ID": "25",
+        "Location": "9636004-1",
+        "Raw_Data_ID": "S-211116_A_C_1_R_9636004",
+        "Resolution": [
+            1440,
+            1080
+        ],
+        "Season": "autumn",
+        "Structure": "A",
+        "Temperature": "13",
+        "Time": "11:36:43"
+    },
+    "Source_Data_Info": {
+        "File_Extension": "jpg",
+        "Large_ID": "A",
+        "Middle_ID": "C",
+        "Shooting_ID": "R",
+        "Source_Data_ID": "S-211116_A_C_1_R_9636004-1"
+    },
+    "Learning_Data_Info": {
+        "File_Extension": "json",
+        "Json_Data_ID": "S-211116_A_C_1_R_9636004-1",
+        "Annotations": [
+            {
+                "Class_ID": "1",
+                "Type": "polygon",
+                "polygon": [
+                    0,
+                    0,
+                    0,
+                    1270,
+                    274,
+                    1338,
+                    282,
+                    1440,
+                    1080,
+                    1440,
+                    1080,
+                    0
+                ]
+            }
+        ]
+    }
+}

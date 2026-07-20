@@ -1,0 +1,133 @@
+{
+    "Raw_Data_Info": {
+        "Acknowledge": "1983",
+        "Copyrighter": "㈜미디어그룹사람과숲",
+        "Date": "2021-12-01",
+        "Equipment": "일반",
+        "Exposure_Time": "0.0021420000",
+        "F_Stop": "1800/1000",
+        "File_Extension": "mp4",
+        "FPS": "30",
+        "Inspection_Distance": "105",
+        "ISO_ID": "25",
+        "Location": "6362454-7",
+        "Raw_Data_ID": "S-211201_A_C_2_R_96362454",
+        "Resolution": [
+            1440,
+            1080
+        ],
+        "Season": "autumn",
+        "Structure": "A",
+        "Temperature": "8",
+        "Time": "12:48:20"
+    },
+    "Source_Data_Info": {
+        "File_Extension": "jpg",
+        "Large_ID": "A",
+        "Middle_ID": "C",
+        "Shooting_ID": "R",
+        "Source_Data_ID": "S-211201_A_C_2_R_96362454-7"
+    },
+    "Learning_Data_Info": {
+        "File_Extension": "json",
+        "Json_Data_ID": "S-211201_A_C_2_R_96362454-7",
+        "Annotations": [
+            {
+                "Class_ID": "2",
+                "Type": "polygon",
+                "polygon": [
+                    318,
+                    813,
+                    337,
+                    815,
+                    359,
+                    826,
+                    370,
+                    822,
+                    381,
+                    819,
+                    384,
+                    814,
+                    392,
+                    814,
+                    399,
+                    806,
+                    412,
+                    807,
+                    420,
+                    809,
+                    433,
+                    805,
+                    441,
+                    795,
+                    449,
+                    794,
+                    453,
+                    792,
+                    452,
+                    789,
+                    443,
+                    790,
+                    434,
+                    796,
+                    420,
+                    803,
+                    402,
+                    802,
+                    391,
+                    807,
+                    379,
+                    811,
+                    374,
+                    816,
+                    358,
+                    817,
+                    345,
+                    812,
+                    327,
+                    811
+                ]
+            },
+            {
+                "Class_ID": "2",
+                "Type": "polygon",
+                "polygon": [
+                    464,
+                    792,
+                    491,
+                    792,
+                    511,
+                    793,
+                    516,
+                    790,
+                    514,
+                    788,
+                    490,
+                    790,
+                    467,
+                    790
+                ]
+            },
+            {
+                "Class_ID": "2",
+                "Type": "polygon",
+                "polygon": [
+                    750,
+                    784,
+                    802,
+                    782,
+                    852,
+                    782,
+                    928,
+                    780,
+                    829,
+                    777,
+                    791,
+                    777,
+                    756,
+                    780
+                ]
+            }
+        ]
+    }
+}

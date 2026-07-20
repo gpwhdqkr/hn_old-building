@@ -1,0 +1,67 @@
+{
+    "Raw_Data_Info": {
+        "Acknowledge": "1978",
+        "Copyrighter": "㈜미디어그룹사람과숲",
+        "Date": "2021-12-23",
+        "Equipment": "일반",
+        "Exposure_Time": "0.0006361323",
+        "F_Stop": "169/100",
+        "File_Extension": "mp4",
+        "FPS": "30",
+        "Inspection_Distance": "100",
+        "ISO_ID": "50",
+        "Location": "961017-13",
+        "Raw_Data_ID": "S-211223_A_C_1_R_0961017",
+        "Resolution": [
+            1440,
+            1080
+        ],
+        "Season": "winter",
+        "Structure": "A",
+        "Temperature": "4",
+        "Time": "10:49:59"
+    },
+    "Source_Data_Info": {
+        "File_Extension": "jpg",
+        "Large_ID": "A",
+        "Middle_ID": "C",
+        "Shooting_ID": "R",
+        "Source_Data_ID": "S-211223_A_C_1_R_0961017-13"
+    },
+    "Learning_Data_Info": {
+        "File_Extension": "json",
+        "Json_Data_ID": "S-211223_A_C_1_R_0961017-13",
+        "Annotations": [
+            {
+                "Class_ID": "1",
+                "Type": "polygon",
+                "polygon": [
+                    0,
+                    0,
+                    0,
+                    1018,
+                    341,
+                    968,
+                    333,
+                    890,
+                    730,
+                    839,
+                    737,
+                    717,
+                    746,
+                    600,
+                    749,
+                    558,
+                    759,
+                    422,
+                    779,
+                    421,
+                    787,
+                    279,
+                    808,
+                    0
+                ]
+            }
+        ]
+    }
+}

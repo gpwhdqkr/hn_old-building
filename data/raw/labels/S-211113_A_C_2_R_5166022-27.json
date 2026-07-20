@@ -1,0 +1,127 @@
+{
+    "Raw_Data_Info": {
+        "Acknowledge": "1999",
+        "Copyrighter": "㈜미디어그룹사람과숲",
+        "Date": "2021-11-13",
+        "Equipment": "일반",
+        "Exposure_Time": "0.0007122507",
+        "F_Stop": "252/100",
+        "File_Extension": "mp4",
+        "FPS": "30",
+        "Inspection_Distance": "150",
+        "ISO_ID": "50",
+        "Location": "166022-27",
+        "Raw_Data_ID": "S-211113_A_C_2_R_5166022",
+        "Resolution": [
+            1440,
+            1080
+        ],
+        "Season": "autumn",
+        "Structure": "A",
+        "Temperature": "10",
+        "Time": "14:04:14"
+    },
+    "Source_Data_Info": {
+        "File_Extension": "jpg",
+        "Large_ID": "A",
+        "Middle_ID": "C",
+        "Shooting_ID": "R",
+        "Source_Data_ID": "S-211113_A_C_2_R_5166022-27"
+    },
+    "Learning_Data_Info": {
+        "File_Extension": "json",
+        "Json_Data_ID": "S-211113_A_C_2_R_5166022-27",
+        "Annotations": [
+            {
+                "Class_ID": "2",
+                "Type": "polygon",
+                "polygon": [
+                    9,
+                    997,
+                    17,
+                    1008,
+                    15,
+                    1016,
+                    27,
+                    1041,
+                    23,
+                    1046,
+                    27,
+                    1059,
+                    17,
+                    1079,
+                    23,
+                    1124,
+                    53,
+                    1141,
+                    77,
+                    1189,
+                    93,
+                    1234,
+                    85,
+                    1238,
+                    72,
+                    1196,
+                    47,
+                    1148,
+                    16,
+                    1130,
+                    8,
+                    1075,
+                    20,
+                    1058,
+                    16,
+                    1045,
+                    17,
+                    1034,
+                    8,
+                    1017,
+                    10,
+                    1010,
+                    3,
+                    997
+                ]
+            },
+            {
+                "Class_ID": "2",
+                "Type": "polygon",
+                "polygon": [
+                    648,
+                    252,
+                    755,
+                    257,
+                    819,
+                    256,
+                    818,
+                    251,
+                    750,
+                    251,
+                    649,
+                    248
+                ]
+            },
+            {
+                "Class_ID": "2",
+                "Type": "polygon",
+                "polygon": [
+                    537,
+                    488,
+                    559,
+                    547,
+                    564,
+                    551,
+                    578,
+                    558,
+                    571,
+                    564,
+                    559,
+                    559,
+                    554,
+                    554,
+                    531,
+                    491
+                ]
+            }
+        ]
+    }
+}
