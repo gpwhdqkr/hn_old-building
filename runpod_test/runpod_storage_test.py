@@ -174,10 +174,11 @@ def cmd_status(args):
 
     print("\n[3) 볼륨에 데이터 넣기]  <- Jupyter 터미널이나 SSH로 Pod에 들어가서 실행")
     print(f"  pip install gdown")
-    print(f"  cd {DEFAULT_MOUNT}                                    # 볼륨이 마운트된 곳 (데이터는 여기에 저장)")
-    print(f'  gdown "https://drive.google.com/uc?id=<파일ID>"               # 파일 하나')
-    print(f'  gdown --folder "https://drive.google.com/drive/folders/<폴더ID>"   # 폴더째')
-    print(f"  # 대용량이라 구글드라이브 확인 페이지가 걸려서 안 받아지면 --fuzzy 옵션을 붙여보세요.")
+    print(f"  cd {DEFAULT_MOUNT}                            # 볼륨이 마운트된 곳 (데이터는 여기에 저장)")
+    print(f"  gdown <파일ID>                                # 파일 하나")
+    print(f"  gdown --folder <폴더ID>                       # 폴더째")
+    print(f"  # ID는 공유링크에서: 파일은 /d/ 와 /view 사이, 폴더는 folders/ 뒤 문자열")
+    print(f"  # 링크 전체 말고 ID만 넣으세요. (팟의 gdown 버전에 따라 링크/--fuzzy 방식은 안 될 수 있음)")
     print(f"  # {DEFAULT_MOUNT}(볼륨)에 받아두면 Pod을 terminate 해도 데이터는 남습니다. (다음 Pod에서 재사용)")
 
 
