@@ -1,0 +1,55 @@
+전체 행 수: 37285
+split
+train         25947
+validation     5780
+test           5558
+Name: count, dtype: int64
+찾지 못한 이미지 수(0이어야 정상): 0
+학습 이미지 수: 6000
+평가(test) 이미지 수: 5558
+
+이미지 변환 중... (처음 한 번만 오래 걸림)
+PCA가 보존한 정보 비율: 0.775
+
+===== decision_tree =====
+              precision    recall  f1-score   support
+
+          우수      0.122     0.365     0.183       501
+          보통      0.122     0.366     0.183       620
+          불량      0.823     0.406     0.544      4437
+
+    accuracy                          0.398      5558
+   macro avg      0.356     0.379     0.303      5558
+weighted avg      0.682     0.398     0.471      5558
+
+
+===== svm =====
+              precision    recall  f1-score   support
+
+          우수      0.195     0.467     0.275       501
+          보통      0.114     0.345     0.171       620
+          불량      0.865     0.482     0.619      4437
+
+    accuracy                          0.465      5558
+   macro avg      0.391     0.431     0.355      5558
+weighted avg      0.721     0.465     0.538      5558
+
+
+===== knn =====
+              precision    recall  f1-score   support
+
+          우수      0.129     0.539     0.208       501
+          보통      0.114     0.390     0.177       620
+          불량      0.872     0.263     0.404      4437
+
+    accuracy                          0.302      5558
+   macro avg      0.371     0.397     0.263      5558
+weighted avg      0.720     0.302     0.361      5558
+
+
+=====최종 비교======
+           model  f1_macro   f1_우수   f1_보통   f1_불량  train_seconds
+0  decision_tree    0.3031  0.1825  0.1827  0.5439            0.7
+1            svm    0.3550  0.2750  0.1709  0.6191            2.7
+2            knn    0.2629  0.2078  0.1766  0.4044            0.0
+저장 완료: D:\teamproject\test_results\Classical ML\f1_results.csv
