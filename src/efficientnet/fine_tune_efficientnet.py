@@ -48,8 +48,11 @@ baseline_model_path = model_dir / f"best_efficientnet_b0_baseline_{RUN_NAME}.pth
 # 파인튜닝 결과를 저장할 경로 (실험 이름이 파일명에 포함됨)
 fine_tuned_model_path = model_dir / f"best_efficientnet_b0_finetuned_{RUN_NAME}.pth"
 
-# 최대 파인튜닝 epoch 수
-num_epochs = 10
+# 최대 파인튜닝 epoch 수: NUM_EPOCHS 환경변수로 지정 (미지정 시 10)
+# 클라우드에서는 코드 수정 없이 실행 시 지정하면 됨:
+#   RUN_NAME=epoch20 NUM_EPOCHS=20 python src/efficientnet/fine_tune_efficientnet.py
+# (patience 조기 종료가 있어서 20으로 지정해도 개선이 멈추면 먼저 끝남)
+num_epochs = int(os.environ.get("NUM_EPOCHS", 10))
 
 # 3회 연속 validation 정확도가 좋아지지 않으면 조기 종료 (팀원과 동일)
 patience = 3
