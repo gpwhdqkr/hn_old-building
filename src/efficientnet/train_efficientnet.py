@@ -60,8 +60,10 @@ model_dir = project_dir / "model"
 # 가장 성능이 좋은 모델을 저장할 경로 (실험 이름이 파일명에 포함됨)
 best_model_path = model_dir / f"best_efficientnet_b0_baseline_{RUN_NAME}.pth"
 
-# 학습 epoch 수
-num_epochs = 10
+# 학습 epoch 수: NUM_EPOCHS 환경변수로 지정 (미지정 시 10)
+# 클라우드에서는 코드 수정 없이 실행 시 지정하면 됨:
+#   RUN_NAME=epoch20 NUM_EPOCHS=20 python src/efficientnet/train_efficientnet.py
+num_epochs = int(os.environ.get("NUM_EPOCHS", 10))
 
 # 클래스 불균형 보정 가중치 (팀원과 동일한 값: 우수, 보통, 불량 순)
 # 데이터가 적은 등급의 손실을 크게 쳐서 불량 쪽으로 쏠리는 것을 막음
