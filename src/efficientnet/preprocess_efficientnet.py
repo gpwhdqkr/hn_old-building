@@ -50,7 +50,10 @@ image_std = [0.229, 0.224, 0.225]
 batch_size = 128
 
 # 이미지를 미리 읽어두는 병렬 프로세스 수 (GPU가 놀지 않게 함)
-num_workers = 4
+# CPU 코어가 많은 서버(런팟 등)에서는 이 값을 늘려야 GPU 활용률이 올라감
+# (참고: 4는 GPU-Util 5%로 병목 발생 확인됨. 코어가 넉넉하면 os.cpu_count()의
+#  절반 정도, 예: 128코어 서버에서는 32 안팎을 권장)
+num_workers = 16
 
 
 def convert_to_local_path(csv_image_path):
