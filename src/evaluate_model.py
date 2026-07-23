@@ -180,3 +180,30 @@ print(
     "\n혼동행렬 저장위치",
     confusion_matrix_path
 )
+
+result_path = (
+    project_dir
+    / "data"
+    / "processed"
+    / "test_result_baseline.txt"
+)
+
+with result_path.open(
+    "w",
+    encoding="utf-8"
+) as result_file:
+    result_file.write("===== Test 평가 결과 =====\n")
+    result_file.write(f"Test 이미지 수: {total_count}\n")
+    result_file.write(f"맞힌 이미지 수: {correct_count}\n")
+    result_file.write(f"Test 정확도: {test_accuracy:.2%}\n")
+
+    result_file.write("\n등급별 성능\n")
+    result_file.write(report)
+
+    result_file.write("\n혼동행렬\n")
+    result_file.write(confusion_table.to_string())
+
+print(
+    "테스트 결과 저장위치:",
+    result_path
+)
