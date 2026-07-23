@@ -94,7 +94,9 @@ def evaluate_on_loader(model, data_loader, loss_function, device):
     )
 
     # 불량을 positive로 본 F1 (프로젝트 목표 지표 — 참고용 출력)
-    defect_f1 = per_class_f1[2]
+    # float() 변환 필수: numpy 타입을 체크포인트에 저장하면
+    # torch.load(weights_only=True)에서 로드가 거부됨
+    defect_f1 = float(per_class_f1[2])
 
     return average_loss, accuracy, defect_f1
 
