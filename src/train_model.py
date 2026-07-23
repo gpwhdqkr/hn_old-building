@@ -83,7 +83,7 @@ optimizer = Adam(
 )
 
 #처음에 3회로 코드정상작동 확인 
-num_epochs = 1
+num_epochs = 10
 
 # 가장 높았던 Validation정확도
 best_validation_accuracy = -1.0
