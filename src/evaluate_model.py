@@ -48,10 +48,75 @@ checkpoint = torch.load(
     weights_only = True
 )
 
+model_name = checkpoint.get(
+    "model_name",
+    best_model_path.stem
+)
+
 saved_epoch = checkpoint.get(
     "epoch",
     "정보없음"
 )
+
+num_epochs = checkpoint.get(
+    "num_epochs",
+    "정보없음"
+)
+
+training_seconds = checkpoint.get(
+    "training_seconds"
+)
+
+optimizer_name = checkpoint.get(
+    "optimizer_name",
+    "정보없음"
+)
+
+learning_rate = checkpoint.get(
+    "learning_rate",
+    "정보없음"
+)
+
+batch_size = checkpoint.get(
+    "batch_size",
+    "정보없음"
+)
+
+loss_function_name = checkpoint.get(
+    "loss_function",
+    "정보없음"
+)
+
+class_weights = checkpoint.get(
+    "class_weights",
+    "정보없음"
+)
+
+train_count = checkpoint.get(
+    "train_count",
+    "정보없음"
+)
+
+validation_count = checkpoint.get(
+    "validation_count",
+    "정보없음"
+)
+
+if training_seconds is not None:
+    training_minutes = int(
+        training_seconds // 60
+    )
+
+    remaining_seconds = (
+        training_seconds % 60
+    )
+
+    training_time_text = (
+        f"{training_minutes}분 "
+        f"{remaining_seconds:.1f}초"
+    )
+else:
+    training_time_text = "정보없음"
 
 saved_validation_accuracy = checkpoint.get(
     "validation_accuracy",
@@ -190,17 +255,93 @@ with result_path.open(
     "w",
     encoding="utf-8"
 ) as result_file:
-    result_file.write("===== Test 평가 결과 =====\n")
-    result_file.write(f"Test 이미지 수: {total_count}\n")
-    result_file.write(f"맞힌 이미지 수: {correct_count}\n")
-    result_file.write(f"Test 정확도: {test_accuracy:.2%}\n")
 
-    result_file.write("\n등급별 성능\n")
+    result_file.write("===== 모델 정보 =====\n")
+    result_file.write(
+        f"모델 이름: {model_name}\n"
+    )
+    result_file.write(
+        f"모델 파일: {best_model_path.name}\n"
+    )
+    result_file.write(
+        f"최고 모델 저장 Epoch: {saved_epoch}\n"
+    )
+    result_file.write(
+        f"전체 Epoch: {num_epochs}\n"
+    )
+
+    if isinstance(
+        saved_validation_accuracy,
+        float
+    ):
+        result_file.write(
+            "Validation 정확도: "
+            f"{saved_validation_accuracy:.2%}\n"
+        )
+    else:
+        result_file.write(
+            "Validation 정확도: "
+            f"{saved_validation_accuracy}\n"
+        )
+
+    result_file.write(
+        f"학습 시간: {training_time_text}\n"
+    )
+
+    result_file.write(
+        "\n===== 학습 설정 =====\n"
+    )
+    result_file.write(
+        f"Optimizer: {optimizer_name}\n"
+    )
+    result_file.write(
+        f"Learning rate: {learning_rate}\n"
+    )
+    result_file.write(
+        f"Batch size: {batch_size}\n"
+    )
+    result_file.write(
+        f"Loss function: {loss_function_name}\n"
+    )
+    result_file.write(
+        f"Class weights: {class_weights}\n"
+    )
+
+    result_file.write(
+        "\n===== 데이터 구성 =====\n"
+    )
+    result_file.write(
+        f"Train 이미지 수: {train_count}\n"
+    )
+    result_file.write(
+        f"Validation 이미지 수: "
+        f"{validation_count}\n"
+    )
+    result_file.write(
+        f"Test 이미지 수: {total_count}\n"
+    )
+
+    result_file.write(
+        "\n===== Test 평가 결과 =====\n"
+    )
+    result_file.write(
+        f"맞힌 이미지 수: {correct_count}\n"
+    )
+    result_file.write(
+        f"Test 정확도: {test_accuracy:.2%}\n"
+    )
+
+    result_file.write(
+        "\n등급별 성능\n"
+    )
     result_file.write(report)
 
-    result_file.write("\n혼동행렬\n")
-    result_file.write(confusion_table.to_string())
-
+    result_file.write(
+        "\n혼동행렬\n"
+    )
+    result_file.write(
+        confusion_table.to_string()
+    )
 print(
     "테스트 결과 저장위치:",
     result_path
