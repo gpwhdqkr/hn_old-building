@@ -8,13 +8,19 @@
 #
 # 평가할 모델 선택:
 #   아래 EVALUATION_TARGET 값을 바꾸면 됨
-#   - "baseline"  → model/best_efficientnet_b0_baseline.pth 평가
-#   - "finetuned" → model/best_efficientnet_b0_finetuned.pth 평가
+#   - "baseline"  → model/best_efficientnet_b0_baseline_<RUN_NAME>.pth 평가
+#   - "finetuned" → model/best_efficientnet_b0_finetuned_<RUN_NAME>.pth 평가
+#
+# [실험 이름으로 결과 구분하기]
+# train/fine_tune을 RUN_NAME을 지정해서 돌렸다면, 여기서도 같은 RUN_NAME을
+# 넘겨야 그 실험의 모델을 찾아서 평가함:
+#   RUN_NAME=epoch20 python src/efficientnet/evaluate_efficientnet.py
+# RUN_NAME을 지정하지 않으면 기본값 "default"가 사용됨
 #
 # 결과:
 #   - 화면에 Test 정확도, 등급별 precision/recall/F1, 혼동행렬 출력
-#   - 혼동행렬 CSV 저장 (모델명 폴더 아래, 없으면 자동 생성):
-#     test_results/efficientnet_b0/test_confusion_matrix_<대상>.csv
+#   - 혼동행렬 CSV 저장 (모델명/실험 이름 폴더 아래, 없으면 자동 생성):
+#     test_results/efficientnet_b0/<RUN_NAME>/test_confusion_matrix_<대상>.csv
 #
 # [팀원과 비교하는 법]
 # 팀원의 evaluate_model.py도 같은 classification_report를 출력하므로
@@ -25,6 +31,7 @@
 # - 참고: macro avg 행 (세 등급 평균)
 # ============================================================
 
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -42,17 +49,24 @@ from preprocess_efficientnet import build_dataloaders
 # ===== 평가할 모델 선택: "baseline" 또는 "finetuned" =====
 EVALUATION_TARGET = "finetuned"
 
+# 실험 이름: RUN_NAME 환경변수로 지정 (미지정 시 "default")
+# train/fine_tune 실행 때와 반드시 같은 값을 써야 그 실험의 모델을 찾음
+RUN_NAME = os.environ.get("RUN_NAME", "default")
+
 project_dir = Path(__file__).resolve().parent.parent.parent
 
-# 선택에 따라 평가할 모델 경로 결정
+# 선택에 따라 평가할 모델 경로 결정 (실험 이름이 파일명에 포함됨)
 model_path = (
     project_dir / "model"
-    / f"best_efficientnet_b0_{EVALUATION_TARGET}.pth"
+    / f"best_efficientnet_b0_{EVALUATION_TARGET}_{RUN_NAME}.pth"
 )
 
-# 혼동행렬 CSV 저장 위치: test_results/<모델명>/ 아래
-# (팀원의 test_results/Classical ML/ 과 같은 방식으로 모델별 폴더 분리)
-test_results_dir = project_dir / "test_results" / "efficientnet_b0"
+# 혼동행렬 CSV 저장 위치: test_results/<모델명>/<실험 이름>/ 아래
+# (팀원의 test_results/Classical ML/ 과 같은 방식으로 모델별 폴더 분리,
+#  실험 이름별로 하위 폴더를 나눠서 여러 번 평가해도 서로 안 겹침)
+test_results_dir = (
+    project_dir / "test_results" / "efficientnet_b0" / RUN_NAME
+)
 
 confusion_matrix_path = (
     test_results_dir
@@ -65,6 +79,8 @@ class_names = ["우수", "보통", "불량"]
 
 
 def main():
+    print("실험 이름 (RUN_NAME) :", RUN_NAME)
+
     if EVALUATION_TARGET not in ("baseline", "finetuned"):
         raise ValueError(
             'EVALUATION_TARGET은 "baseline" 또는 "finetuned"여야 합니다: '
@@ -74,7 +90,9 @@ def main():
     if not model_path.exists():
         raise FileNotFoundError(
             f"평가할 모델을 찾을 수 없습니다: {model_path}\n"
-            "train_efficientnet.py (와 fine_tune_efficientnet.py)를 먼저 실행하세요."
+            "같은 RUN_NAME으로 train_efficientnet.py (와 fine_tune_efficientnet.py)"
+            "를 먼저 실행하세요.\n"
+            f"(예: RUN_NAME={RUN_NAME} python src/efficientnet/train_efficientnet.py)"
         )
 
     device = torch.device(

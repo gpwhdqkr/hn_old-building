@@ -7,15 +7,22 @@
 # 실행 (반드시 train_efficientnet.py를 먼저 실행해야 함):
 #   python src/efficientnet/fine_tune_efficientnet.py
 #
+# [실험 이름으로 결과 구분하기]
+# train_efficientnet.py를 RUN_NAME을 지정해서 돌렸다면, 여기서도
+# 반드시 같은 RUN_NAME을 넘겨야 그 baseline을 찾아서 이어 학습함:
+#   RUN_NAME=epoch20 python src/efficientnet/fine_tune_efficientnet.py
+# RUN_NAME을 지정하지 않으면 기본값 "default"가 사용됨
+#
 # 결과:
-#   model/best_efficientnet_b0_finetuned.pth
+#   model/best_efficientnet_b0_finetuned_<RUN_NAME>.pth
 #   (validation 정확도가 baseline보다 좋아진 시점의 모델이 저장됨 — 팀원과 동일 기준.
 #    한 번도 안 좋아지면 baseline 상태 그대로 저장되어 있음)
 #
-# 다음 단계:
-#   python src/efficientnet/evaluate_efficientnet.py
+# 다음 단계 (같은 RUN_NAME을 반드시 그대로 넘겨야 함):
+#   RUN_NAME=epoch20 python src/efficientnet/evaluate_efficientnet.py
 # ============================================================
 
+import os
 import time
 from pathlib import Path
 
@@ -29,13 +36,17 @@ from preprocess_efficientnet import build_dataloaders
 
 project_dir = Path(__file__).resolve().parent.parent.parent
 
+# 실험 이름: RUN_NAME 환경변수로 지정 (미지정 시 "default")
+# train_efficientnet.py 실행 때와 반드시 같은 값을 써야 baseline을 찾음
+RUN_NAME = os.environ.get("RUN_NAME", "default")
+
 model_dir = project_dir / "model"
 
-# 1단계에서 저장한 baseline 모델
-baseline_model_path = model_dir / "best_efficientnet_b0_baseline.pth"
+# 1단계에서 저장한 baseline 모델 (실험 이름이 파일명에 포함됨)
+baseline_model_path = model_dir / f"best_efficientnet_b0_baseline_{RUN_NAME}.pth"
 
-# 파인튜닝 결과를 저장할 경로
-fine_tuned_model_path = model_dir / "best_efficientnet_b0_finetuned.pth"
+# 파인튜닝 결과를 저장할 경로 (실험 이름이 파일명에 포함됨)
+fine_tuned_model_path = model_dir / f"best_efficientnet_b0_finetuned_{RUN_NAME}.pth"
 
 # 최대 파인튜닝 epoch 수
 num_epochs = 10
@@ -102,10 +113,13 @@ def evaluate_on_loader(model, data_loader, loss_function, device):
 
 
 def main():
+    print("실험 이름 (RUN_NAME) :", RUN_NAME)
+
     if not baseline_model_path.exists():
         raise FileNotFoundError(
             f"baseline 모델을 찾을 수 없습니다: {baseline_model_path}\n"
-            "먼저 train_efficientnet.py를 실행하세요."
+            "먼저 같은 RUN_NAME으로 train_efficientnet.py를 실행하세요.\n"
+            f"(예: RUN_NAME={RUN_NAME} python src/efficientnet/train_efficientnet.py)"
         )
 
     device = torch.device(
@@ -187,7 +201,8 @@ def main():
             "validation_accuracy": baseline_validation_accuracy,
             "validation_defect_f1": checkpoint.get("validation_defect_f1", -1.0),
             "class_names": class_names,
-            "source_model": baseline_model_path.name
+            "source_model": baseline_model_path.name,
+            "run_name": RUN_NAME
         },
         fine_tuned_model_path
     )
@@ -262,7 +277,8 @@ def main():
                     "validation_accuracy": validation_accuracy,
                     "validation_defect_f1": validation_defect_f1,
                     "class_names": class_names,
-                    "source_model": baseline_model_path.name
+                    "source_model": baseline_model_path.name,
+                    "run_name": RUN_NAME
                 },
                 fine_tuned_model_path
             )

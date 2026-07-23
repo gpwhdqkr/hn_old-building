@@ -7,12 +7,20 @@
 # 실행:
 #   python src/efficientnet/train_efficientnet.py
 #
+# [실험 이름으로 결과 구분하기]
+# epoch 수 등 설정을 바꿔가며 여러 번 실험할 때, 이전 결과를 덮어쓰지 않고
+# 파일명을 다르게 쌓고 싶으면 RUN_NAME 환경변수를 지정해서 실행하면 됨
+# (코드 수정 없이 명령어 앞에 붙이기만 하면 됨 — 클라우드에서도 git pull만
+#  받은 코드 그대로 사용 가능):
+#   RUN_NAME=epoch20 python src/efficientnet/train_efficientnet.py
+# RUN_NAME을 지정하지 않으면 기본값 "default"가 사용됨
+#
 # 결과:
-#   model/best_efficientnet_b0_baseline.pth
+#   model/best_efficientnet_b0_baseline_<RUN_NAME>.pth
 #   (validation 정확도가 가장 높았던 시점의 모델이 저장됨 — 팀원과 동일 기준)
 #
-# 다음 단계:
-#   python src/efficientnet/fine_tune_efficientnet.py
+# 다음 단계 (같은 RUN_NAME을 반드시 그대로 넘겨야 함):
+#   RUN_NAME=epoch20 python src/efficientnet/fine_tune_efficientnet.py
 #
 # [팀원 MobileNetV2와의 비교 조건]
 # - 전처리/split/클래스 가중치/옵티마이저(Adam, lr=0.001) 동일
@@ -24,6 +32,7 @@
 # 팀원 evaluate_model.py의 같은 항목과 비교하면 됨.
 # ============================================================
 
+import os
 import time
 from pathlib import Path
 
@@ -40,11 +49,16 @@ from preprocess_efficientnet import build_dataloaders
 
 project_dir = Path(__file__).resolve().parent.parent.parent
 
+# 실험 이름: RUN_NAME 환경변수로 지정 (미지정 시 "default")
+# 이 값이 저장 파일명에 붙어서, 설정을 바꿔 여러 번 실험해도
+# 이전 결과가 덮어써지지 않고 실험별로 따로 쌓임
+RUN_NAME = os.environ.get("RUN_NAME", "default")
+
 # 학습된 모델을 저장할 폴더 (없으면 생성)
 model_dir = project_dir / "model"
 
-# 가장 성능이 좋은 모델을 저장할 경로
-best_model_path = model_dir / "best_efficientnet_b0_baseline.pth"
+# 가장 성능이 좋은 모델을 저장할 경로 (실험 이름이 파일명에 포함됨)
+best_model_path = model_dir / f"best_efficientnet_b0_baseline_{RUN_NAME}.pth"
 
 # 학습 epoch 수
 num_epochs = 10
@@ -116,6 +130,8 @@ def evaluate_on_loader(model, data_loader, loss_function, device):
 
 def main():
     model_dir.mkdir(parents=True, exist_ok=True)
+
+    print("실험 이름 (RUN_NAME) :", RUN_NAME)
 
     # GPU가 있으면 GPU, 없으면 CPU 사용
     device = torch.device(
@@ -227,7 +243,8 @@ def main():
                     "model_state_dict": model.state_dict(),
                     "validation_accuracy": validation_accuracy,
                     "validation_defect_f1": validation_defect_f1,
-                    "class_names": class_names
+                    "class_names": class_names,
+                    "run_name": RUN_NAME
                 },
                 best_model_path
             )
