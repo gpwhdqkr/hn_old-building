@@ -3,10 +3,10 @@ from pathlib import Path
 
 project_dir = Path(__file__).resolve().parent.parent
 
-raw_dir = Path(r"D:\hn_old-building_raw\raw")
+image_dir = project_dir / "data" / "processed_images"
+labels_dir = Path("/원본/JSON/라벨/폴더")
 
-image_dir = raw_dir / "images"
-labels_dir = raw_dir / "labels"
+processed_dir = project_dir / "data" / "processed"
 
 class_names = {
     "1": "우수",
@@ -28,7 +28,7 @@ json_files = list(labels_dir.rglob("*.json"))
 print(f"찾은 json 파일 수 : {len(json_files)}개")
 
 image_paths = [
-            image_path for image_path in image_dir.rglob("*")
+            image_path for image_path in labels_dir.rglob("*")
             if image_path.suffix.lower() in {
                 ".jpg",".jpeg",".png"
             }

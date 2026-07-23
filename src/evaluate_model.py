@@ -17,7 +17,7 @@ project_dir = Path(__file__).resolve().parent.parent
 best_model_path = project_dir / "model" / "best_mobilenet_v2_baseline.pth"
 
 # 혼동 행렬 csv를 저장할 위치
-confusion_matrix_path = project_dir / "data" / "processed" / "test_confusion_matrix_b..csv"
+confusion_matrix_path = project_dir / "data" / "processed" / "test_confusion_matrix_baseline.csv"
 
 device = torch.device(
     "cuda"
