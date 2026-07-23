@@ -9,23 +9,35 @@ from torchvision.transforms import v2
 project_dir = Path(__file__).resolve().parent.parent
 
 metadata_path = project_dir / "data" / "processed" / "metadata_split.csv"
+image_dir = project_dir / "data" / "processed_images"
+metadata = pd.read_csv(metadata_path)
+image_paths = [
+    image_path
+    for image_path in image_dir.rglob("*")
+    if image_path.suffix.lower() in {
+        ".jpg", ".jpeg", ".png"
+    }
+]
 
-metadata = pd.read_csv(
-    metadata_path,
-    encoding="utf-8-sig"
-)
+image_by_name = {
+    image_path.name: image_path
+    for image_path in image_paths
+}
+
+print("찾은 실제 이미지 수:", len(image_paths))
+
 
 train_data = metadata[
     metadata["split"] == "train"
-].reset_index(drop=True)
+].copy()
 
 validation_data = metadata[
     metadata["split"] == "validation"
-].reset_index(drop=True)
+].copy()
 
 test_data = metadata[
     metadata["split"] == "test"
-].reset_index(drop=True)
+].copy()
 
 # MobileNetV2 사전학습 모델에 맞춘 평균과 표준편차
 image_mean = [0.485, 0.456, 0.406]
@@ -81,63 +93,70 @@ evaluation_transform = v2.Compose([
 
 #csv와 실제 이미지를 연결하는 데이터셋 클래스
 class BuildingDataset(Dataset):
-    
+
     def __init__(
         self,
         dataframe,
-        project_directory,
+        image_by_name,
         transform
     ):
-        self.dataframe = dataframe
-        self.project_directory = project_directory
+        self.dataframe = dataframe.reset_index(
+            drop=True
+        )
+        self.image_by_name = image_by_name
         self.transform = transform
 
-    # 데이터셋에 이미지가 몇 장 있는지 반환
     def __len__(self):
         return len(self.dataframe)
-    
-    # 지정된 순서의 이미지 한 장과 정답 반환
-    def __getitem__(self, index):
 
-        #CSV에서 index번째 행을 가져옴
+    def __getitem__(self, index):
         row = self.dataframe.iloc[index]
-        #CSV 상대경로를 실제 전체 경로로변환
-        image_path = (
-            self.project_directory
-            / row["image_path"]
+
+        image_name = Path(
+            str(row["image_path"])
+        ).name
+
+        image_path = self.image_by_name.get(
+            image_name
         )
 
-        # 이미지를 열고 RGB형식으로 통일
-        with Image.open(image_path) as image_file:
-            image = image_file.convert("RGB")
-        
-        # 이미지 전처리
-        image = self.transform(image)
+        if image_path is None:
+            raise FileNotFoundError(
+                f"이미지를 찾을 수 없습니다: {image_name}"
+            )
 
-        # 모델이 사용할 정답값
-        label = int(row["model_label"])
-        
+        image = Image.open(
+            image_path
+        ).convert("RGB")
+
+        label = int(
+            row["model_label"]
+        )
+
+        if self.transform is not None:
+            image = self.transform(image)
+
         return image, label
 
 # Train 데이터셋
 train_dataset = BuildingDataset(
     dataframe=train_data,
-    project_directory=project_dir,
+    image_by_name=image_by_name,
     transform=train_transform
 )
 
 # Validation 데이터셋
 validation_dataset = BuildingDataset(
     dataframe=validation_data,
-    project_directory=project_dir,
+    image_by_name=image_by_name,
     transform=evaluation_transform
 )
 
 # Test 데이터셋
 test_dataset = BuildingDataset(
-    dataframe = test_data,
-    project_directory = project_dir,
-    transform = evaluation_transform
+    dataframe=test_data,
+    image_by_name=image_by_name,
+    transform=evaluation_transform
 )
 
 # 한번에 모델에 전달할 이미지 수
