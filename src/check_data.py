@@ -5,9 +5,6 @@ project_dir = Path(__file__).resolve().parent.parent
 
 data_dir = Path("/workspace/sample_data")
 
-image_dir = data_dir / "9.원천데이터" / "TS_아파트"
-labels_dir = data_dir / "2.원천데이터" / "TL아파트"
-
 processed_dir = project_dir / "data" / "processed"
 
 class_names = {
@@ -26,11 +23,11 @@ invalid_class_files = []
 invalid_json_files = []
 thermal_files = [] 
 
-json_files = list(labels_dir.rglob("*.json"))
+json_files = list(data_dir.rglob("*.json"))
 print(f"찾은 json 파일 수 : {len(json_files)}개")
 
 image_paths = [
-            image_path for image_path in image_dir.rglob("*")
+            image_path for image_path in data_dir.rglob("*")
             if image_path.suffix.lower() in {
                 ".jpg",".jpeg",".png"
             }
