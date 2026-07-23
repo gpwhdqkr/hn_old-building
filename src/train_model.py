@@ -239,13 +239,22 @@ for epoch in range(1, num_epochs + 1):
         #모델과 필요한 정보를 함께 저장
         torch.save(
             {
-                "epoch": epoch,
-                "model_state_dict": model.state_dict(),
-                "validation_accuracy": validation_accuracy,
-                "class_names": {
-                    0: "우수",
-                    1: "보통",
-                    2: "불량"
+            "epoch": epoch,
+            "num_epochs": num_epochs,
+            "model_name": "MobileNetV2 Baseline",
+            "model_state_dict": model.state_dict(),
+            "validation_accuracy": validation_accuracy,
+            "optimizer_name": "Adam",
+            "learning_rate": 0.001,
+            "batch_size": train_loader.batch_size,
+            "loss_function": "Weighted CrossEntropyLoss",
+            "class_weights": [3.79, 2.95, 0.42],
+            "train_count": len(train_loader.dataset),
+            "validation_count": len(validation_loader.dataset),
+            "class_names": {
+                0: "우수",
+                1: "보통",
+                2: "불량"
                 }
             },
             best_model_path
@@ -258,6 +267,19 @@ for epoch in range(1, num_epochs + 1):
 # 전체 학습 시간 계산
 training_seconds = (
     time.time() - training_start_time
+)
+
+checkpoint = torch.load(
+    best_model_path,
+    map_location="cpu",
+    weights_only=True
+)
+
+checkpoint["training_seconds"] = training_seconds
+
+torch.save(
+    checkpoint,
+    best_model_path
 )
 
 print("==========================================")

@@ -49,10 +49,8 @@ checkpoint = torch.load(
 )
 
 saved_epoch = checkpoint.get(
-    "fine_tune_epoch",
-    checkpoint.get(
-       "eqoch", "정보없음"
-    )
+    "epoch",
+    "정보없음"
 )
 
 saved_validation_accuracy = checkpoint.get(
