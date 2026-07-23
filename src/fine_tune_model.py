@@ -58,11 +58,8 @@ model.load_state_dict(
 )
 
 baseline_validation_accuracy = checkpoint.get(
-    "validation_accuracy",
-    checkpoint.get(
-        "calidation_accuracy",
-        -1.0
-    )
+   "validation_accuracy",
+    -1.0
 )
 
 print(
@@ -116,10 +113,22 @@ best_validation_accuracy = baseline_validation_accuracy
 # 미세 조정이 전혀 개선되지 않더라고 기본 모델 상태가 finetuned 파일에 남도록 먼저 저장
 torch.save(
     {
-        "epoch": checkpoint.get("eqoch", 0),
+        "epoch": checkpoint.get("epoch", 0),
         "fine_tune_epoch": 0,
+        "num_epochs": num_epochs,
+        "model_name": "MobileNetV2 Fine-tuned",
         "model_state_dict": model.state_dict(),
-        "validation_ccuracy": baseline_validation_accuracy,
+        "validation_accuracy": baseline_validation_accuracy,
+        "optimizer_name": "Adam",
+        "feature_learning_rate": 0.00001,
+        "classifier_learning_rate": 0.0001,
+        "batch_size": train_loader.batch_size,
+        "loss_function": "Weighted CrossEntropyLoss",
+        "class_weights": [3.79, 2.95, 0.42],
+        "train_count": len(train_loader.dataset),
+        "validation_count": len(validation_loader.dataset),
+        "patience": patience,
+        "unfrozen_layers": "model.features[-1] + classifier",
         "class_names": {
             0: "우수",
             1: "보통",
@@ -239,9 +248,21 @@ for epoch in range(1, num_epochs + 1):
             {
                 "epoch": epoch,
                 "fine_tune_epoch": epoch,
+                "num_epochs": num_epochs,
+                "model_name": "MobileNetV2 Fine-tuned",
                 "model_state_dict": model.state_dict(),
-                "validation_accuracy":validation_accuracy ,
-                "class_names":{
+                "validation_accuracy": validation_accuracy,
+                "optimizer_name": "Adam",
+                "feature_learning_rate": 0.00001,
+                "classifier_learning_rate": 0.0001,
+                "batch_size": train_loader.batch_size,
+                "loss_function": "Weighted CrossEntropyLoss",
+                "class_weights": [3.79, 2.95, 0.42],
+                "train_count": len(train_loader.dataset),
+                "validation_count": len(validation_loader.dataset),
+                "patience": patience,
+                "unfrozen_layers": "model.features[-1] + classifier",
+                "class_names": {
                     0: "우수",
                     1: "보통",
                     2: "불량"
@@ -264,6 +285,23 @@ for epoch in range(1, num_epochs + 1):
 
 training_seconds = (
     time.time()-training_start_time
+)
+
+fine_tuned_checkpoint = torch.load(
+    fine_tuned_model_path,
+    map_location="cpu",
+    weights_only=True
+)
+
+fine_tuned_checkpoint["training_seconds"] = (
+    training_seconds
+)
+
+fine_tuned_checkpoint["executed_epochs"] = epoch
+
+torch.save(
+    fine_tuned_checkpoint,
+    fine_tuned_model_path
 )
 
 print("\n=========================================")
