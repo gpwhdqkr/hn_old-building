@@ -13,8 +13,8 @@
 #
 # 결과:
 #   - 화면에 Test 정확도, 등급별 precision/recall/F1, 혼동행렬 출력
-#   - 혼동행렬 CSV 저장:
-#     data/processed/test_confusion_matrix_efficientnet_<대상>.csv
+#   - 혼동행렬 CSV 저장 (모델명 폴더 아래, 없으면 자동 생성):
+#     test_results/efficientnet_b0/test_confusion_matrix_<대상>.csv
 #
 # [팀원과 비교하는 법]
 # 팀원의 evaluate_model.py도 같은 classification_report를 출력하므로
@@ -50,10 +50,13 @@ model_path = (
     / f"best_efficientnet_b0_{EVALUATION_TARGET}.pth"
 )
 
-# 혼동행렬 CSV 저장 위치
+# 혼동행렬 CSV 저장 위치: test_results/<모델명>/ 아래
+# (팀원의 test_results/Classical ML/ 과 같은 방식으로 모델별 폴더 분리)
+test_results_dir = project_dir / "test_results" / "efficientnet_b0"
+
 confusion_matrix_path = (
-    project_dir / "data" / "processed"
-    / f"test_confusion_matrix_efficientnet_{EVALUATION_TARGET}.csv"
+    test_results_dir
+    / f"test_confusion_matrix_{EVALUATION_TARGET}.csv"
 )
 
 # 모델 출력 순서와 등급 이름
@@ -192,6 +195,9 @@ def main():
 
     print("혼동행렬")
     print(confusion_table)
+
+    # 저장 폴더가 없으면 생성 (test_results/efficientnet_b0/)
+    test_results_dir.mkdir(parents=True, exist_ok=True)
 
     confusion_table.to_csv(
         confusion_matrix_path,
