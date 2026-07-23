@@ -160,30 +160,33 @@ test_dataset = BuildingDataset(
 )
 
 # 한번에 모델에 전달할 이미지 수
-batch_size = 16
+batch_size = 50
 
 #Train 데이터로더
 train_loader = DataLoader(
     train_dataset,
-    batch_size = batch_size,
-    shuffle = True,
-    num_workers = 0
+    batch_size=batch_size,
+    shuffle=True,
+    num_workers=4,
+    pin_memory=True
 )
 
 #validation데이터 로더
 validation_loader = DataLoader(
     validation_dataset,
-    batch_size = batch_size,
-    shuffle = False,
-    num_workers = 0
+    batch_size=batch_size,
+    shuffle=False,
+    num_workers=4,
+    pin_memory=True
 )
 
 # Test데이터로더
 test_loader = DataLoader(
     test_dataset,
-    batch_size = batch_size,
-    shuffle = False,
-    num_workers = 0
+    batch_size=batch_size,
+    shuffle=False,
+    num_workers=4,
+    pin_memory=True
 )
 
 # Train 데이터에서 첫 번째 묶음 가져오기

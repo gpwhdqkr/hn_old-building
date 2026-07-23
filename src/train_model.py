@@ -107,8 +107,14 @@ for epoch in range(1, num_epochs + 1):
     for images, labels in train_loader:
         
         #이미지와 정답을 같은 장치로 이동
-        images = images.to(device)
-        labels = labels.to(device)
+        images = images.to(
+            device,
+            non_blocking=True
+        )
+        labels = labels.to(
+            device,
+            non_blocking=True
+        )
 
         # 이전 배치에서 계산된 기울기를 초기화
         optimizer.zero_grad()
