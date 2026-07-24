@@ -113,29 +113,38 @@
 </head>
 <body>
 
-   <div class="container">
-    <!-- 초기화 버튼을 누르면 첫 화면(업로드 페이지)으로 돌아갑니다 -->
+  <div class="container">
+    <!-- 초기화 버튼 -->
     <button class="reset-btn" onclick="location.href='/'">초기화</button>
     <h1>노후 주택 판정기</h1>
 
+    <!-- 1. 상단: 판정 결과 (가운데 정렬) -->
+    <div class="final-status-container">
+        <div class="status-title">판정 결과</div>
+        <div class="status-text">{{ ai_result }}</div>
+    </div>
+    <br>
+    <br>
+
+    <!-- 2. 하단: 이미지 2개 구역 (원본사진 | 결과사진) -->
     <div class="result-container">
-        <!-- 왼쪽: 제공된 이미지 구역 -->
+        <!-- 왼쪽: 원본 이미지 -->
         <div class="preview-box">
-            <!-- 🔴 파이썬 서버에서 보낸 변수 {{ user_image_url }} 자리에 빨간 박스 사진 경로가 안착함 -->
-            <img src="{{ user_image_url }}" alt="업로드된 이미지" style="max-width: 100%; max-height: 500px;">
-            <div class="result-label">제공된 이미지</div>
+            <img src="{{ user_image_url }}" alt="원본 이미지">
+            <div class="result-label">원본 사진</div>
         </div>
 
-        <!-- 오른쪽: AI 판정 결과 구역 -->
-        <div class="analysis-box">
-            <!-- 🔴 파이썬 서버에서 보낸 변수 {{ ai_result }} 자리에 "우수", "보통", "불량" 텍스트가 안착함 -->
-            <div class="status-text" style="font-size: 24px; font-weight: bold; color: red;">{{ ai_result }}</div>
-            <div class="result-label">판정 : {{ ai_result }}</div>
+        <!-- 오른쪽: 결과 이미지 (CAM 시각화 등) -->
+        <div class="preview-box">
+            <!-- 💡 서버에서 결과 이미지 경로 변수명(예: cam_image_url)을 맞춰서 넣어주세요 -->
+            <img src="{{ cam_image_url }}" alt="결과 이미지">
+            <div class="result-label">결과 사진</div>
         </div>
     </div>
 
     <p class="footer-notice">**이 모델은 AI-HUB 에 올라와있는 '서울시 노후 주택 균열 데이터'로 학습시켰습니다.**</p>
     <p class="footer-notice">** 이 모델은 이런 원리로 판별하고 있습니다. AI는 오류가 있을 수 있습니다. **</p>
+  </div>
 
 </body>
 </html>
