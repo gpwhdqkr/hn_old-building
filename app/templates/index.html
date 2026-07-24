@@ -212,7 +212,7 @@
         
         if (file) {
             // 1. [조건] 허용할 이미지 확장자 검사 (jpg, jpeg, png, webp 등)
-            const allowedExtensions = /(\.jpg|\.jpeg|\.png|\.webp|\.gif)$/i;
+            const allowedExtensions = /(\.jpg|\.jpeg|\.png)$/i;
             if (!allowedExtensions.exec(file.name)) {
                 alert('허용되지 않는 파일 형식입니다. 이미지 파일(jpg, png 등)만 올려주세요!');
                 resetUpload(); // 잘못된 파일이 들어가면 초기화
