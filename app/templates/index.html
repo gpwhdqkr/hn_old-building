@@ -206,19 +206,34 @@
         }
     });
 
-    // 기존 미리보기 로직 (수정 없음)
+   // 기존 미리보기 로직 (파일 크기 및 확장자 제한 조건 추가)
     function showPreview(input) {
         const file = input.files[0];
         
         if (file) {
-            const reader = new FileReader();
+            // 1. [조건] 허용할 이미지 확장자 검사 (jpg, jpeg, png, webp 등)
+            const allowedExtensions = /(\.jpg|\.jpeg|\.png|\.webp|\.gif)$/i;
+            if (!allowedExtensions.exec(file.name)) {
+                alert('허용되지 않는 파일 형식입니다. 이미지 파일(jpg, png 등)만 올려주세요!');
+                resetUpload(); // 잘못된 파일이 들어가면 초기화
+                return;
+            }
+
+            // 2. [조건] 파일 용량 제한 검사 (50MB = 50 * 1024 * 1024 bytes)
+            const maxSize = 50 * 1024 * 1024;
+            if (file.size > maxSize) {
+                alert('파일 크기가 너무 큽니다. 최대 50MB 이하의 이미지만 업로드 가능합니다!');
+                resetUpload(); // 용량 초과 시 초기화
+                return;
+            }
             
+            // 3. 조건 통과 시 미리보기 및 분석 버튼 노출
+            const reader = new FileReader();
             reader.onload = function(e) {
                 document.getElementById('imageViewer').src = e.target.result;
                 document.getElementById('previewContainer').style.display = 'block';
                 document.getElementById('submitBtn').style.display = 'block';
             }
-            
             reader.readAsDataURL(file);
         }
     }
