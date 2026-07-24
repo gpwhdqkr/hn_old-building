@@ -6,10 +6,10 @@
 # 실행:
 #   python src/efficientnet/evaluate_efficientnet.py
 #
-# 평가할 모델 선택:
-#   아래 EVALUATION_TARGET 값을 바꾸면 됨
-#   - "baseline"  → model/best_efficientnet_b0_baseline_<RUN_NAME>.pth 평가
+# 평가할 모델 선택 (EVAL_TARGET 환경변수, 미지정 시 finetuned):
 #   - "finetuned" → model/best_efficientnet_b0_finetuned_<RUN_NAME>.pth 평가
+#   - "baseline"  → model/best_efficientnet_b0_baseline_<RUN_NAME>.pth 평가
+#   예) EVAL_TARGET=baseline python src/efficientnet/evaluate_efficientnet.py
 #
 # [실험 이름으로 결과 구분하기]
 # train/fine_tune을 RUN_NAME을 지정해서 돌렸다면, 여기서도 같은 RUN_NAME을
@@ -49,7 +49,10 @@ from torchvision.models import efficientnet_b0
 from preprocess_efficientnet import build_dataloaders
 
 # ===== 평가할 모델 선택: "baseline" 또는 "finetuned" =====
-EVALUATION_TARGET = "finetuned"
+# EVAL_TARGET 환경변수로 지정 (미지정 시 "finetuned")
+# 클라우드에서는 코드 수정 없이 실행 시 지정하면 됨:
+#   EVAL_TARGET=baseline python src/efficientnet/evaluate_efficientnet.py
+EVALUATION_TARGET = os.environ.get("EVAL_TARGET", "finetuned")
 
 # 실험 이름: RUN_NAME 환경변수로 지정 (미지정 시 "default")
 # train/fine_tune 실행 때와 반드시 같은 값을 써야 그 실험의 모델을 찾음
