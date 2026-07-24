@@ -8,13 +8,21 @@
 #
 # 평가할 모델 선택:
 #   아래 EVALUATION_TARGET 값을 바꾸면 됨
-#   - "baseline"  → model/best_efficientnet_b0_baseline.pth 평가
-#   - "finetuned" → model/best_efficientnet_b0_finetuned.pth 평가
+#   - "baseline"  → model/best_efficientnet_b0_baseline_<RUN_NAME>.pth 평가
+#   - "finetuned" → model/best_efficientnet_b0_finetuned_<RUN_NAME>.pth 평가
+#
+# [실험 이름으로 결과 구분하기]
+# train/fine_tune을 RUN_NAME을 지정해서 돌렸다면, 여기서도 같은 RUN_NAME을
+# 넘겨야 그 실험의 모델을 찾아서 평가함:
+#   RUN_NAME=epoch20 python src/efficientnet/evaluate_efficientnet.py
+# RUN_NAME을 지정하지 않으면 기본값 "default"가 사용됨
 #
 # 결과:
 #   - 화면에 Test 정확도, 등급별 precision/recall/F1, 혼동행렬 출력
-#   - 혼동행렬 CSV 저장 (모델명 폴더 아래, 없으면 자동 생성):
-#     test_results/efficientnet_b0/test_confusion_matrix_<대상>.csv
+#   - 화면에 나온 평가 결과 전문이 텍스트 파일로도 자동 저장됨 (tee 불필요):
+#     test_results/efficientnet_b0/<RUN_NAME>/evaluate_<대상>_result.txt
+#   - 혼동행렬 CSV 저장 (모델명/실험 이름 폴더 아래, 없으면 자동 생성):
+#     test_results/efficientnet_b0/<RUN_NAME>/test_confusion_matrix_<대상>.csv
 #
 # [팀원과 비교하는 법]
 # 팀원의 evaluate_model.py도 같은 classification_report를 출력하므로
@@ -25,6 +33,7 @@
 # - 참고: macro avg 행 (세 등급 평균)
 # ============================================================
 
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -42,21 +51,34 @@ from preprocess_efficientnet import build_dataloaders
 # ===== 평가할 모델 선택: "baseline" 또는 "finetuned" =====
 EVALUATION_TARGET = "finetuned"
 
+# 실험 이름: RUN_NAME 환경변수로 지정 (미지정 시 "default")
+# train/fine_tune 실행 때와 반드시 같은 값을 써야 그 실험의 모델을 찾음
+RUN_NAME = os.environ.get("RUN_NAME", "default")
+
 project_dir = Path(__file__).resolve().parent.parent.parent
 
-# 선택에 따라 평가할 모델 경로 결정
+# 선택에 따라 평가할 모델 경로 결정 (실험 이름이 파일명에 포함됨)
 model_path = (
     project_dir / "model"
-    / f"best_efficientnet_b0_{EVALUATION_TARGET}.pth"
+    / f"best_efficientnet_b0_{EVALUATION_TARGET}_{RUN_NAME}.pth"
 )
 
-# 혼동행렬 CSV 저장 위치: test_results/<모델명>/ 아래
-# (팀원의 test_results/Classical ML/ 과 같은 방식으로 모델별 폴더 분리)
-test_results_dir = project_dir / "test_results" / "efficientnet_b0"
+# 혼동행렬 CSV 저장 위치: test_results/<모델명>/<실험 이름>/ 아래
+# (팀원의 test_results/Classical ML/ 과 같은 방식으로 모델별 폴더 분리,
+#  실험 이름별로 하위 폴더를 나눠서 여러 번 평가해도 서로 안 겹침)
+test_results_dir = (
+    project_dir / "test_results" / "efficientnet_b0" / RUN_NAME
+)
 
 confusion_matrix_path = (
     test_results_dir
     / f"test_confusion_matrix_{EVALUATION_TARGET}.csv"
+)
+
+# 평가 결과 전문(화면 출력과 동일 내용)을 저장할 텍스트 파일 경로
+result_text_path = (
+    test_results_dir
+    / f"evaluate_{EVALUATION_TARGET}_result.txt"
 )
 
 # 모델 출력 순서와 등급 이름
@@ -65,6 +87,16 @@ class_names = ["우수", "보통", "불량"]
 
 
 def main():
+    # 화면에 출력한 내용을 그대로 모아뒀다가 마지막에 파일로도 저장
+    result_lines = []
+
+    def record(text=""):
+        """print와 동시에 결과 파일에 남길 내용으로 기록한다."""
+        print(text)
+        result_lines.append(str(text))
+
+    record(f"실험 이름 (RUN_NAME) : {RUN_NAME}")
+
     if EVALUATION_TARGET not in ("baseline", "finetuned"):
         raise ValueError(
             'EVALUATION_TARGET은 "baseline" 또는 "finetuned"여야 합니다: '
@@ -74,7 +106,9 @@ def main():
     if not model_path.exists():
         raise FileNotFoundError(
             f"평가할 모델을 찾을 수 없습니다: {model_path}\n"
-            "train_efficientnet.py (와 fine_tune_efficientnet.py)를 먼저 실행하세요."
+            "같은 RUN_NAME으로 train_efficientnet.py (와 fine_tune_efficientnet.py)"
+            "를 먼저 실행하세요.\n"
+            f"(예: RUN_NAME={RUN_NAME} python src/efficientnet/train_efficientnet.py)"
         )
 
     device = torch.device(
@@ -83,8 +117,8 @@ def main():
         else "cpu"
     )
 
-    print("사용 장치 :", device)
-    print("평가 모델 :", model_path.name)
+    record(f"사용 장치 : {device}")
+    record(f"평가 모델 : {model_path.name}")
 
     _, _, test_loader = build_dataloaders()
 
@@ -107,14 +141,14 @@ def main():
 
     model.load_state_dict(checkpoint["model_state_dict"])
 
-    print("저장된 Epoch :", checkpoint.get("epoch", "정보없음"))
+    record(f"저장된 Epoch : {checkpoint.get('epoch', '정보없음')}")
 
     if "fine_tune_epoch" in checkpoint:
-        print("파인튜닝 Epoch :", checkpoint["fine_tune_epoch"])
+        record(f"파인튜닝 Epoch : {checkpoint['fine_tune_epoch']}")
 
     saved_validation_accuracy = checkpoint.get("validation_accuracy")
     if isinstance(saved_validation_accuracy, float):
-        print(
+        record(
             f"저장 당시 Validation 정확도: {saved_validation_accuracy:.2%}"
         )
 
@@ -162,10 +196,10 @@ def main():
     # 참고 지표: 세 등급 F1의 단순 평균
     test_macro_f1 = per_class_f1.mean()
 
-    print("\nTest 평가 결과")
-    print("Test 이미지 수 :", total_count)
-    print("맞힌 이미지 수 :", correct_count)
-    print(f"Test 정확도 : {test_accuracy:.2%}")
+    record("\nTest 평가 결과")
+    record(f"Test 이미지 수 : {total_count}")
+    record(f"맞힌 이미지 수 : {correct_count}")
+    record(f"Test 정확도 : {test_accuracy:.2%}")
 
     # 등급별 precision / recall / F1 상세 출력
     report = classification_report(
@@ -177,8 +211,8 @@ def main():
         zero_division=0
     )
 
-    print("\n등급별 성능")
-    print(report)
+    record("\n등급별 성능")
+    record(report)
 
     # 혼동행렬: 실제 등급별로 어떤 등급으로 예측했는지 개수 표
     matrix = confusion_matrix(
@@ -193,8 +227,8 @@ def main():
         columns=["예측_우수", "예측_보통", "예측_불량"]
     )
 
-    print("혼동행렬")
-    print(confusion_table)
+    record("혼동행렬")
+    record(confusion_table)
 
     # 저장 폴더가 없으면 생성 (test_results/efficientnet_b0/)
     test_results_dir.mkdir(parents=True, exist_ok=True)
@@ -203,16 +237,24 @@ def main():
         confusion_matrix_path,
         encoding="utf-8-sig"
     )
-    print("\n혼동행렬 저장 위치 :", confusion_matrix_path)
+    record(f"\n혼동행렬 저장 위치 : {confusion_matrix_path}")
 
     # MobileNetV2와 비교할 최종 수치
     # (팀원 evaluate_model.py 출력의 같은 항목과 비교하면 됨)
-    print("\n==========================================")
-    print(f"[비교용 최종 지표] EfficientNet-B0 ({EVALUATION_TARGET})")
-    print(f"Test 불량 F1 (핵심)  : {test_defect_f1:.4f}")
-    print(f"Test Macro F1 (참고) : {test_macro_f1:.4f}")
-    print(f"Test Accuracy (참고) : {test_accuracy:.2%}")
-    print("==========================================")
+    record("\n==========================================")
+    record(f"[비교용 최종 지표] EfficientNet-B0 ({EVALUATION_TARGET})")
+    record(f"Test 불량 F1 (핵심)  : {test_defect_f1:.4f}")
+    record(f"Test Macro F1 (참고) : {test_macro_f1:.4f}")
+    record(f"Test Accuracy (참고) : {test_accuracy:.2%}")
+    record("==========================================")
+
+    # 화면에 출력한 평가 결과 전문을 텍스트 파일로 저장
+    # (utf-8-sig: 윈도우 메모장에서도 한글이 깨지지 않게)
+    result_text_path.write_text(
+        "\n".join(result_lines),
+        encoding="utf-8-sig"
+    )
+    print("평가 결과 저장 위치 :", result_text_path)
 
 
 if __name__ == "__main__":

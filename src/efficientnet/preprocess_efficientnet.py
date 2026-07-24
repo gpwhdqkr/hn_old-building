@@ -18,6 +18,7 @@
 #   이 프로젝트의 data/processed_images/ 경로로 치환해서 읽음
 # ============================================================
 
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -50,7 +51,13 @@ image_std = [0.229, 0.224, 0.225]
 batch_size = 128
 
 # 이미지를 미리 읽어두는 병렬 프로세스 수 (GPU가 놀지 않게 함)
-num_workers = 4
+# 고정값이면 실행 서버(로컬 PC vs 런팟 등)마다 적정치가 달라 코드를 매번
+# 손봐야 하므로, 서버의 실제 CPU 코어 수에 맞춰 자동으로 정함.
+# - 코어 절반을 쓰되 최소 4, 최대 32로 제한 (코어가 아주 많아도 워커를
+#   과도하게 띄우면 프로세스 관리 오버헤드만 늘어나므로 상한을 둠)
+# - 실측: 워커 4개는 128코어 런팟에서 GPU-Util 5%로 병목 발생 확인됨
+_cpu_count = os.cpu_count() or 4
+num_workers = min(32, max(4, _cpu_count // 2))
 
 
 def convert_to_local_path(csv_image_path):

@@ -14,10 +14,10 @@ from preprocess_data import test_loader
 project_dir = Path(__file__).resolve().parent.parent
 
 # 학습 때 저장한 최고 모델의 위치
-best_model_path = project_dir / "model" / "best_mobilenet_v2_baseline.pth"
+best_model_path = project_dir / "model" / "best_mobilenet_v2_finetuned.pth"
 
 # 혼동 행렬 csv를 저장할 위치
-confusion_matrix_path = project_dir / "data" / "processed" / "test_confusion_matrix_baseline.csv"
+confusion_matrix_path = project_dir / "data" / "processed" / "test_confusion_matrix_finetuned.csv"
 
 device = torch.device(
     "cuda"
@@ -54,8 +54,11 @@ model_name = checkpoint.get(
 )
 
 saved_epoch = checkpoint.get(
-    "epoch",
-    "정보없음"
+    "fine_tune_epoch",
+    checkpoint.get(
+        "epoch",
+        "정보없음"
+    )
 )
 
 num_epochs = checkpoint.get(
@@ -72,8 +75,33 @@ optimizer_name = checkpoint.get(
     "정보없음"
 )
 
-learning_rate = checkpoint.get(
-    "learning_rate",
+feature_learning_rate = checkpoint.get(
+    "feature_learning_rate",
+    "정보없음"
+)
+
+classifier_learning_rate = checkpoint.get(
+    "classifier_learning_rate",
+    "정보없음"
+)
+
+patience = checkpoint.get(
+    "patience",
+    "정보없음"
+)
+
+unfrozen_layers = checkpoint.get(
+    "unfrozen_layers",
+    "정보없음"
+)
+
+source_model = checkpoint.get(
+    "source_model",
+    "정보없음"
+)
+
+executed_epochs = checkpoint.get(
+    "executed_epochs",
     "정보없음"
 )
 
@@ -120,10 +148,7 @@ else:
 
 saved_validation_accuracy = checkpoint.get(
     "validation_accuracy",
-    checkpoint.get(
-        "validation_ccuract",
-        "정보없음"
-    )
+    "정보없음"
 )
 
 print("저장된 Epoch : ", saved_epoch)
@@ -133,7 +158,10 @@ if isinstance(saved_validation_accuracy, float):
         f"저장 당시 Validation 정확도 : {saved_validation_accuracy:.2%}"
     )
 else:
-    print("저장 당시 Validation장확도 : ", saved_validation_accuracy)
+   print(
+    "저장 당시 Validation 정확도 : ",
+    saved_validation_accuracy
+)
 
 # 체크포인트에 들어 있는 학습된 가중치를 모델에 적용
 model.load_state_dict(
@@ -248,7 +276,7 @@ result_path = (
     project_dir
     / "data"
     / "processed"
-    / "test_result_baseline.txt"
+    / "test_result_finetuned.txt"
 )
 
 with result_path.open(
@@ -295,7 +323,33 @@ with result_path.open(
         f"Optimizer: {optimizer_name}\n"
     )
     result_file.write(
-        f"Learning rate: {learning_rate}\n"
+        f"Feature learning rate: "
+        f"{feature_learning_rate}\n"
+    )
+
+    result_file.write(
+        f"Classifier learning rate: "
+        f"{classifier_learning_rate}\n"
+    )
+
+    result_file.write(
+        f"Early stopping patience: "
+        f"{patience}\n"
+    )
+
+    result_file.write(
+        f"학습 해제 계층: "
+        f"{unfrozen_layers}\n"
+    )
+
+    result_file.write(
+        f"기본 모델: "
+        f"{source_model}\n"
+    )
+
+    result_file.write(
+        f"실제 실행 Epoch: "
+        f"{executed_epochs}\n"
     )
     result_file.write(
         f"Batch size: {batch_size}\n"
