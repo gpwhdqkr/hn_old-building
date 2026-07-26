@@ -1,0 +1,58 @@
+﻿==========================================
+offline augmentation 실험 - Test 평가
+==========================================
+실험 이름 (RUN_NAME) : aug2fixed
+평가 대상 (EVAL_TARGET) : finetuned
+모델 파일 : best_efficientnet_b0_aug_finetuned_aug2fixed.pth
+사용 장치 : cuda
+GPU : NVIDIA GeForce RTX 5070 Ti
+
+===== 데이터 구성 =====
+Test 장수 : 5558
+Test 원본/증강본 : {'original': 5558}
+Test 등급별 : {'불량': 4437, '보통': 620, '우수': 501}
+→ test에 증강본 없음 (평가 오염 없음, 기존 결과와 비교 가능)
+
+===== 학습 설정 (모델 파일에 기록된 값) =====
+baseline epoch : 7
+파인튜닝 epoch : 0
+Validation 정확도 : 76.71%
+클래스 가중치 : [3.79, 2.95, 0.42]
+가중치 결정 방식 : fixed
+학습에 쓴 Train 장수 : 28877
+학습 Train 등급별 : {0: 2284, 1: 5860, 2: 20733}
+배치 크기 : 128
+
+===== Test 평가 결과 =====
+Test 정확도 : 74.96%
+불량 F1 (핵심 지표) : 0.8621
+보통 F1 (증강 목표 지표) : 0.3142
+우수 F1 : 0.6271
+Macro F1 : 0.6011
+
+===== 등급별 상세 =====
+              precision    recall  f1-score   support
+
+          우수     0.5784    0.6846    0.6271       501
+          보통     0.2387    0.4597    0.3142       620
+          불량     0.9382    0.7974    0.8621      4437
+
+    accuracy                         0.7496      5558
+   macro avg     0.5851    0.6472    0.6011      5558
+weighted avg     0.8277    0.7496    0.7798      5558
+
+===== 추론 속도 =====
+Test 5558장 추론 시간 : 24.3초
+초당 처리 장수 : 229.1장/초
+이미지 1장당 : 4.37ms
+
+===== 혼동행렬 =====
+       예측_우수  예측_보통  예측_불량
+실제_우수    343    129     29
+실제_보통    131    285    204
+실제_불량    119    780   3538
+
+보통 620장 중 204장을 불량으로 오분류 (32.9%)
+(기존 MobileNetV2는 620장 중 249장 = 40.2%)
+
+혼동행렬 저장 : D:\mlTeamProject1\.claude\worktrees\mobilenet-box-preprocessing-b6ec6e\test_results\efficientnet_b0_augmented\aug2fixed\test_confusion_matrix_finetuned.csv

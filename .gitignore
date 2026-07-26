@@ -1,1 +1,10 @@
 data/processed_images/*
+
+# 파이썬 실행 부산물
+__pycache__/
+*.pyc
+
+# 학습된 모델 가중치 (한 개당 약 16MB)
+# 코드와 metadata_split.csv만 있으면 언제든 재학습으로 복원되므로 깃에 넣지 않는다.
+# 이미 커밋되어 있는 MobileNetV2 .pth 3개는 추적 중이라 이 규칙의 영향을 받지 않는다.
+model/*.pth

@@ -1,0 +1,5 @@
+# 이 폴더의 내용물(증강 이미지 수천 장, 확장 CSV)은 깃에 올리지 않는다.
+# build_augmented_dataset.py로 언제든 똑같이 다시 만들 수 있고,
+# 루트 .gitignore를 수정하지 않기 위해 이 폴더가 스스로를 무시하게 했다.
+*
+!.gitignore
