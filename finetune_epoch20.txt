@@ -1,0 +1,101 @@
+nohup: ignoring input
+실험 이름 (RUN_NAME) : epoch20
+사용 장치 : cuda
+baseline Validation 정확도: 80.57%
+
+==== Fine-tuning Epoch 1/20 ====
+Train Loss: 0.3097 | Train Accuracy: 86.74%
+Validation Loss: 0.5970 | Validation Accuracy: 79.90% | Validation 불량 F1 (참고): 0.8853
+Validation 성능 개선 없음: 1/3
+
+==== Fine-tuning Epoch 2/20 ====
+Train Loss: 0.2912 | Train Accuracy: 87.33%
+Validation Loss: 0.5911 | Validation Accuracy: 80.90% | Validation 불량 F1 (참고): 0.8923
+파인튜닝 최고 모델 저장 : /workspace/hn_old-building/model/best_efficientnet_b0_finetuned_epoch20.pth
+
+==== Fine-tuning Epoch 3/20 ====
+Train Loss: 0.2833 | Train Accuracy: 87.51%
+Validation Loss: 0.5938 | Validation Accuracy: 80.73% | Validation 불량 F1 (참고): 0.8909
+Validation 성능 개선 없음: 1/3
+
+==== Fine-tuning Epoch 4/20 ====
+Train Loss: 0.2718 | Train Accuracy: 88.18%
+Validation Loss: 0.5977 | Validation Accuracy: 80.31% | Validation 불량 F1 (참고): 0.8871
+Validation 성능 개선 없음: 2/3
+
+==== Fine-tuning Epoch 5/20 ====
+Train Loss: 0.2574 | Train Accuracy: 88.72%
+Validation Loss: 0.5990 | Validation Accuracy: 80.92% | Validation 불량 F1 (참고): 0.8930
+파인튜닝 최고 모델 저장 : /workspace/hn_old-building/model/best_efficientnet_b0_finetuned_epoch20.pth
+
+==== Fine-tuning Epoch 6/20 ====
+Train Loss: 0.2482 | Train Accuracy: 89.22%
+Validation Loss: 0.5981 | Validation Accuracy: 81.14% | Validation 불량 F1 (참고): 0.8937
+파인튜닝 최고 모델 저장 : /workspace/hn_old-building/model/best_efficientnet_b0_finetuned_epoch20.pth
+
+==== Fine-tuning Epoch 7/20 ====
+Train Loss: 0.2406 | Train Accuracy: 89.68%
+Validation Loss: 0.5955 | Validation Accuracy: 81.71% | Validation 불량 F1 (참고): 0.8982
+파인튜닝 최고 모델 저장 : /workspace/hn_old-building/model/best_efficientnet_b0_finetuned_epoch20.pth
+
+==== Fine-tuning Epoch 8/20 ====
+Train Loss: 0.2285 | Train Accuracy: 89.99%
+Validation Loss: 0.5973 | Validation Accuracy: 82.20% | Validation 불량 F1 (참고): 0.9010
+파인튜닝 최고 모델 저장 : /workspace/hn_old-building/model/best_efficientnet_b0_finetuned_epoch20.pth
+
+==== Fine-tuning Epoch 9/20 ====
+Train Loss: 0.2200 | Train Accuracy: 90.62%
+Validation Loss: 0.6012 | Validation Accuracy: 82.40% | Validation 불량 F1 (참고): 0.9024
+파인튜닝 최고 모델 저장 : /workspace/hn_old-building/model/best_efficientnet_b0_finetuned_epoch20.pth
+
+==== Fine-tuning Epoch 10/20 ====
+Train Loss: 0.2161 | Train Accuracy: 90.70%
+Validation Loss: 0.5994 | Validation Accuracy: 82.20% | Validation 불량 F1 (참고): 0.9008
+Validation 성능 개선 없음: 1/3
+
+==== Fine-tuning Epoch 11/20 ====
+Train Loss: 0.2031 | Train Accuracy: 91.26%
+Validation Loss: 0.5988 | Validation Accuracy: 82.70% | Validation 불량 F1 (참고): 0.9042
+파인튜닝 최고 모델 저장 : /workspace/hn_old-building/model/best_efficientnet_b0_finetuned_epoch20.pth
+
+==== Fine-tuning Epoch 12/20 ====
+Train Loss: 0.1967 | Train Accuracy: 91.47%
+Validation Loss: 0.6015 | Validation Accuracy: 82.82% | Validation 불량 F1 (참고): 0.9048
+파인튜닝 최고 모델 저장 : /workspace/hn_old-building/model/best_efficientnet_b0_finetuned_epoch20.pth
+
+==== Fine-tuning Epoch 13/20 ====
+Train Loss: 0.1895 | Train Accuracy: 91.96%
+Validation Loss: 0.6054 | Validation Accuracy: 83.60% | Validation 불량 F1 (참고): 0.9102
+파인튜닝 최고 모델 저장 : /workspace/hn_old-building/model/best_efficientnet_b0_finetuned_epoch20.pth
+
+==== Fine-tuning Epoch 14/20 ====
+Train Loss: 0.1879 | Train Accuracy: 91.95%
+Validation Loss: 0.6038 | Validation Accuracy: 82.82% | Validation 불량 F1 (참고): 0.9051
+Validation 성능 개선 없음: 1/3
+
+==== Fine-tuning Epoch 15/20 ====
+Train Loss: 0.1766 | Train Accuracy: 92.80%
+Validation Loss: 0.6075 | Validation Accuracy: 83.65% | Validation 불량 F1 (참고): 0.9107
+파인튜닝 최고 모델 저장 : /workspace/hn_old-building/model/best_efficientnet_b0_finetuned_epoch20.pth
+
+==== Fine-tuning Epoch 16/20 ====
+Train Loss: 0.1728 | Train Accuracy: 92.73%
+Validation Loss: 0.6092 | Validation Accuracy: 82.94% | Validation 불량 F1 (참고): 0.9058
+Validation 성능 개선 없음: 1/3
+
+==== Fine-tuning Epoch 17/20 ====
+Train Loss: 0.1684 | Train Accuracy: 92.92%
+Validation Loss: 0.6096 | Validation Accuracy: 83.06% | Validation 불량 F1 (참고): 0.9068
+Validation 성능 개선 없음: 2/3
+
+==== Fine-tuning Epoch 18/20 ====
+Train Loss: 0.1668 | Train Accuracy: 92.95%
+Validation Loss: 0.6109 | Validation Accuracy: 83.55% | Validation 불량 F1 (참고): 0.9097
+Validation 성능 개선 없음: 3/3
+Validation 성능이 개선되지 않아 중단합니다.
+
+==========================================
+파인튜닝 완료
+최고 Validation 정확도: 83.65%
+학습 시간 : 527.3초
+저장된 모델 : /workspace/hn_old-building/model/best_efficientnet_b0_finetuned_epoch20.pth

@@ -1,0 +1,36 @@
+사용 장치 : cuda
+평가 모델 : best_efficientnet_b0_finetuned.pth
+저장된 Epoch : 9
+파인튜닝 Epoch : 10
+저장 당시 Validation 정확도: 82.01%
+
+Test 평가 결과
+Test 이미지 수 : 5558
+맞힌 이미지 수 : 4550
+Test 정확도 : 81.86%
+
+등급별 성능
+              precision    recall  f1-score   support
+
+          우수     0.6422    0.7166    0.6774       501
+          보통     0.3397    0.4597    0.3907       620
+          불량     0.9389    0.8803    0.9087      4437
+
+    accuracy                         0.8186      5558
+   macro avg     0.6403    0.6855    0.6589      5558
+weighted avg     0.8453    0.8186    0.8301      5558
+
+혼동행렬
+       예측_우수  예측_보통  예측_불량
+실제_우수    359    107     35
+실제_보통    116    285    219
+실제_불량     84    447   3906
+
+혼동행렬 저장 위치 : /workspace/hn_old-building/test_results/efficientnet_b0/test_confusion_matrix_finetuned.csv
+
+==========================================
+[비교용 최종 지표] EfficientNet-B0 (finetuned)
+Test 불량 F1 (핵심)  : 0.9087
+Test Macro F1 (참고) : 0.6589
+Test Accuracy (참고) : 81.86%
+==========================================

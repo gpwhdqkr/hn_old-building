@@ -1,0 +1,37 @@
+﻿실험 이름 (RUN_NAME) : epoch20
+사용 장치 : cuda
+평가 모델 : best_efficientnet_b0_finetuned_epoch20.pth
+저장된 Epoch : 17
+파인튜닝 Epoch : 15
+저장 당시 Validation 정확도: 83.65%
+
+Test 평가 결과
+Test 이미지 수 : 5558
+맞힌 이미지 수 : 4624
+Test 정확도 : 83.20%
+
+등급별 성능
+              precision    recall  f1-score   support
+
+          우수     0.6743    0.7026    0.6882       501
+          보통     0.3694    0.4516    0.4064       620
+          불량     0.9331    0.8997    0.9161      4437
+
+    accuracy                         0.8320      5558
+   macro avg     0.6590    0.6846    0.6702      5558
+weighted avg     0.8469    0.8320    0.8387      5558
+
+혼동행렬
+       예측_우수  예측_보통  예측_불량
+실제_우수    352     98     51
+실제_보통    105    280    235
+실제_불량     65    380   3992
+
+혼동행렬 저장 위치 : /workspace/hn_old-building/test_results/efficientnet_b0/epoch20/test_confusion_matrix_finetuned.csv
+
+==========================================
+[비교용 최종 지표] EfficientNet-B0 (finetuned)
+Test 불량 F1 (핵심)  : 0.9161
+Test Macro F1 (참고) : 0.6702
+Test Accuracy (참고) : 83.20%
+==========================================

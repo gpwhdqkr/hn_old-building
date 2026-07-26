@@ -1,0 +1,40 @@
+===== 모델 정보 =====
+모델 이름: MobileNetV2 Baseline
+모델 파일: best_mobilenet_v2_baseline.pth
+최고 모델 저장 Epoch: 5
+전체 Epoch: 10
+Validation 정확도: 82.68%
+학습 시간: 32분 17.0초
+
+===== 학습 설정 =====
+Optimizer: Adam
+Learning rate: 0.001
+Batch size: 50
+Loss function: Weighted CrossEntropyLoss
+Class weights: [3.79, 2.95, 0.42]
+
+===== 데이터 구성 =====
+Train 이미지 수: 25947
+Validation 이미지 수: 5780
+Test 이미지 수: 5558
+
+===== Test 평가 결과 =====
+맞힌 이미지 수: 4570
+Test 정확도: 82.22%
+
+등급별 성능
+              precision    recall  f1-score   support
+
+          우수     0.6550    0.7465    0.6978       501
+          보통     0.3432    0.4290    0.3814       620
+          불량     0.9330    0.8857    0.9088      4437
+
+    accuracy                         0.8222      5558
+   macro avg     0.6438    0.6871    0.6626      5558
+weighted avg     0.8422    0.8222    0.8309      5558
+
+혼동행렬
+       예측_우수  예측_보통  예측_불량
+실제_우수    374     94     33
+실제_보통    105    266    249
+실제_불량     92    415   3930
