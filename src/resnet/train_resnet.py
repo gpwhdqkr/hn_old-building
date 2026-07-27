@@ -1,0 +1,330 @@
+# ============================================================
+# [사용법]
+# ResNet baseline 학습 스크립트 (1단계).
+# ImageNet 사전학습 가중치를 불러와 특징 추출부는 전부 동결하고
+# 마지막 분류층(fc)만 우수/보통/불량 3등급 분류로 학습합니다.
+#
+# 실행 (런팟 = 리눅스):
+#   RESNET_ARCH=resnet18 RUN_NAME=r18_e20 NUM_EPOCHS=20 python src/resnet/train_resnet.py
+#
+# [주의: 윈도우 PowerShell은 리눅스식 인라인 환경변수를 못 씁니다]
+# 위 리눅스 문법을 PowerShell에 그대로 치면 파서 오류가 납니다. 로컬에서 테스트할 때는
+# 반드시 아래처럼 $env: 로 먼저 지정하세요.
+#   $env:RESNET_ARCH="resnet18"; $env:RUN_NAME="r18_e20"; $env:NUM_EPOCHS="20"
+#   python src/resnet/train_resnet.py
+#
+# [환경변수]
+#   RESNET_ARCH : resnet18 (기본) 또는 resnet50
+#   RUN_NAME    : 실험 이름 (기본 "default"). 저장 파일명에 붙어서 실험별로 결과가 쌓임
+#   NUM_EPOCHS  : 학습 epoch 수 (기본 10)
+#   BATCH_SIZE  : 배치 크기 (기본 128). resnet50에서 OOM이 나면 64로 낮출 것
+#
+# 결과:
+#   model/best_<RESNET_ARCH>_baseline_<RUN_NAME>.pth
+#   (validation 정확도가 가장 높았던 시점의 모델이 저장됨 — 팀원/EfficientNet과 동일 기준)
+#
+# 다음 단계 (같은 RESNET_ARCH와 RUN_NAME을 반드시 그대로 넘겨야 함):
+#   RESNET_ARCH=resnet18 RUN_NAME=r18_e20 python src/resnet/fine_tune_resnet.py
+#
+# [기존 실험과의 비교 조건]
+# - 전처리/split/클래스 가중치/옵티마이저(Adam, lr=0.001)/최고모델 선택 기준(validation
+#   정확도) 모두 팀원 MobileNetV2 및 EfficientNet-B0와 동일
+# - 다른 것은 모델뿐 → test 결과 차이를 모델 차이로 해석할 수 있음
+#
+# F1 스코어(불량 F1 등)는 참고용으로 매 epoch 출력되지만 모델 선택에는 쓰지 않습니다.
+# 최종 F1 비교는 evaluate_resnet.py의 test 결과에서 하면 됩니다.
+# ============================================================
+
+import os
+import time
+from pathlib import Path
+
+import torch
+from sklearn.metrics import f1_score
+from torch import nn
+from torch.optim import Adam
+from torchvision.models import (
+    ResNet18_Weights,
+    ResNet50_Weights,
+    resnet18,
+    resnet50
+)
+
+from preprocess_resnet import batch_size, build_dataloaders
+
+project_dir = Path(__file__).resolve().parent.parent.parent
+
+# 학습할 ResNet 종류: RESNET_ARCH 환경변수로 지정 (미지정 시 "resnet18")
+# resnet18(11.7M)과 resnet50(25.6M)은 fc/layer4 구조가 같아서 코드 한 벌로 처리됨
+RESNET_ARCH = os.environ.get("RESNET_ARCH", "resnet18")
+
+# 실험 이름: RUN_NAME 환경변수로 지정 (미지정 시 "default")
+# 이 값이 저장 파일명에 붙어서, 설정을 바꿔 여러 번 실험해도
+# 이전 결과가 덮어써지지 않고 실험별로 따로 쌓임
+RUN_NAME = os.environ.get("RUN_NAME", "default")
+
+# 학습된 모델을 저장할 폴더 (없으면 생성)
+model_dir = project_dir / "model"
+
+# 가장 성능이 좋은 모델을 저장할 경로 (모델 종류와 실험 이름이 파일명에 포함됨)
+best_model_path = model_dir / f"best_{RESNET_ARCH}_baseline_{RUN_NAME}.pth"
+
+# 학습 epoch 수: NUM_EPOCHS 환경변수로 지정 (미지정 시 10)
+num_epochs = int(os.environ.get("NUM_EPOCHS", 10))
+
+# 클래스 불균형 보정 가중치 (팀원과 동일한 값: 우수, 보통, 불량 순)
+# 데이터가 적은 등급의 손실을 크게 쳐서 불량 쪽으로 쏠리는 것을 막음
+class_weight_values = [3.79, 2.95, 0.42]
+
+# 저장 시 함께 기록할 등급 이름
+class_names = {
+    0: "우수",
+    1: "보통",
+    2: "불량"
+}
+
+
+def create_resnet_model(use_pretrained_weights):
+    """RESNET_ARCH에 맞는 ResNet을 만들고 분류층을 3등급 출력으로 교체해서 반환한다.
+
+    use_pretrained_weights:
+        True  → ImageNet 사전학습 가중치를 받아서 시작 (1단계 학습용)
+        False → 빈 구조만 생성 (저장된 체크포인트를 덮어씌울 때용)
+
+    train/fine_tune/evaluate가 반드시 같은 구조를 만들어야 하므로
+    각 스크립트에 동일한 함수를 둔다. (한쪽만 바꾸면 가중치 로드가 실패함)
+    """
+    if RESNET_ARCH == "resnet18":
+        weights = ResNet18_Weights.DEFAULT if use_pretrained_weights else None
+        model = resnet18(weights=weights)
+
+    elif RESNET_ARCH == "resnet50":
+        weights = ResNet50_Weights.DEFAULT if use_pretrained_weights else None
+        model = resnet50(weights=weights)
+
+    else:
+        raise ValueError(
+            'RESNET_ARCH는 "resnet18" 또는 "resnet50"이어야 합니다: '
+            f"{RESNET_ARCH}"
+        )
+
+    # 기존 마지막 분류층(1000 클래스)을 3등급 출력으로 교체
+    # in_features는 resnet18=512, resnet50=2048로 자동 처리됨
+    model.fc = nn.Linear(
+        model.fc.in_features,
+        3
+    )
+
+    return model
+
+
+def evaluate_on_loader(model, data_loader, loss_function, device):
+    """주어진 데이터로더 전체에 대해 손실/정확도/F1(참고용)을 계산한다."""
+    model.eval()
+
+    loss_sum = 0.0
+    correct_count = 0
+    total_count = 0
+
+    # macro F1 계산용: 전체 정답과 예측을 모아둠
+    all_labels = []
+    all_predictions = []
+
+    # 평가에서는 모델을 수정하지 않으므로 기울기 계산 중단
+    with torch.no_grad():
+        for images, labels in data_loader:
+            images = images.to(device)
+            labels = labels.to(device)
+
+            outputs = model(images)
+
+            loss = loss_function(outputs, labels)
+
+            loss_sum += loss.item() * images.size(0)
+
+            # 세 출력 중 가장 큰 위치를 예측 등급으로 선택
+            predictions = outputs.argmax(dim=1)
+
+            correct_count += (predictions == labels).sum().item()
+            total_count += labels.size(0)
+
+            all_labels.extend(labels.cpu().tolist())
+            all_predictions.extend(predictions.cpu().tolist())
+
+    average_loss = loss_sum / total_count
+    accuracy = correct_count / total_count
+
+    # 등급별 F1 (참고용 출력을 위해 계산. 순서: 우수, 보통, 불량)
+    per_class_f1 = f1_score(
+        all_labels,
+        all_predictions,
+        labels=[0, 1, 2],
+        average=None,
+        zero_division=0
+    )
+
+    # 불량을 positive로 본 F1 (프로젝트 목표 지표 — 참고용 출력)
+    # float() 변환 필수: numpy 타입을 체크포인트에 저장하면
+    # torch.load(weights_only=True)에서 로드가 거부됨
+    defect_f1 = float(per_class_f1[2])
+
+    return average_loss, accuracy, defect_f1
+
+
+def main():
+    model_dir.mkdir(parents=True, exist_ok=True)
+
+    print("모델 종류 (RESNET_ARCH) :", RESNET_ARCH)
+    print("실험 이름 (RUN_NAME) :", RUN_NAME)
+    print("배치 크기 :", batch_size)
+
+    # GPU가 있으면 GPU, 없으면 CPU 사용
+    device = torch.device(
+        "cuda"
+        if torch.cuda.is_available()
+        else "cpu"
+    )
+    print("사용 장치 :", device)
+
+    if device.type == "cuda":
+        print("GPU :", torch.cuda.get_device_name(0))
+
+    train_loader, validation_loader, _ = build_dataloaders()
+
+    # ImageNet으로 사전학습된 ResNet 생성 (분류층은 3등급으로 교체된 상태)
+    model = create_resnet_model(use_pretrained_weights=True)
+
+    # 특징 추출부 전체 동결 (분류층만 학습하는 baseline)
+    # EfficientNet은 model.features 라는 컨테이너를 통째로 잠그면 됐지만,
+    # ResNet은 conv1/bn1/layer1~4가 평평하게 나열되어 있어서 컨테이너가 없다.
+    # 그래서 이름이 "fc."로 시작하지 않는 파라미터를 전부 잠그는 방식을 쓴다.
+    for parameter_name, parameter in model.named_parameters():
+        if not parameter_name.startswith("fc."):
+            parameter.requires_grad = False
+
+    model = model.to(device)
+
+    # 실제로 학습되는 파라미터 수 (결과 리포트에 조건을 명시하기 위해 기록)
+    trainable_param_count = sum(
+        parameter.numel()
+        for parameter in model.parameters()
+        if parameter.requires_grad
+    )
+    total_param_count = sum(
+        parameter.numel()
+        for parameter in model.parameters()
+    )
+
+    print(
+        f"전체 파라미터 : {total_param_count / 1e6:.1f}M / "
+        f"학습 파라미터 : {trainable_param_count / 1e6:.2f}M"
+    )
+
+    # 클래스 가중치를 적용한 손실 함수
+    class_weights = torch.tensor(
+        class_weight_values,
+        dtype=torch.float32,
+        device=device
+    )
+    loss_function = nn.CrossEntropyLoss(
+        weight=class_weights
+    )
+
+    # 분류층만 학습 (팀원 baseline과 동일한 lr)
+    optimizer = Adam(
+        model.fc.parameters(),
+        lr=0.001
+    )
+
+    # 최고 성능 기록 (팀원과 동일하게 validation 정확도 기준)
+    best_validation_accuracy = -1.0
+
+    training_start_time = time.time()
+
+    for epoch in range(1, num_epochs + 1):
+        print(f"\n==== Epoch {epoch}/{num_epochs} ====")
+
+        # ---- Train ----
+        model.train()
+
+        train_loss_sum = 0.0
+        train_correct_count = 0
+        train_total_count = 0
+
+        for images, labels in train_loader:
+            images = images.to(device)
+            labels = labels.to(device)
+
+            # 이전 배치의 기울기 초기화
+            optimizer.zero_grad()
+
+            # 예측 → 손실 → 기울기 → 가중치 수정
+            outputs = model(images)
+            loss = loss_function(outputs, labels)
+            loss.backward()
+            optimizer.step()
+
+            train_loss_sum += loss.item() * images.size(0)
+
+            predictions = outputs.argmax(dim=1)
+            train_correct_count += (predictions == labels).sum().item()
+            train_total_count += labels.size(0)
+
+        train_loss = train_loss_sum / train_total_count
+        train_accuracy = train_correct_count / train_total_count
+
+        # ---- Validation ----
+        validation_loss, validation_accuracy, validation_defect_f1 = (
+            evaluate_on_loader(
+                model,
+                validation_loader,
+                loss_function,
+                device
+            )
+        )
+
+        print(
+            f"Train Loss: {train_loss:.4f} | "
+            f"Train Accuracy: {train_accuracy:.2%}"
+        )
+        print(
+            f"Validation Loss: {validation_loss:.4f} | "
+            f"Validation Accuracy: {validation_accuracy:.2%} | "
+            f"Validation 불량 F1 (참고): {validation_defect_f1:.4f}"
+        )
+
+        # 팀원과 동일하게 validation 정확도가 최고 기록을 넘으면 저장
+        if validation_accuracy > best_validation_accuracy:
+            best_validation_accuracy = validation_accuracy
+
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "model_state_dict": model.state_dict(),
+                    "validation_accuracy": validation_accuracy,
+                    "validation_defect_f1": validation_defect_f1,
+                    "class_names": class_names,
+                    "class_weight_values": class_weight_values,
+                    "run_name": RUN_NAME,
+                    "resnet_arch": RESNET_ARCH,
+                    "batch_size": batch_size,
+                    "num_epochs": num_epochs,
+                    "trainable_param_count": trainable_param_count,
+                    "total_param_count": total_param_count,
+                    "unfrozen_layers": "fc"
+                },
+                best_model_path
+            )
+
+            print("최고 성능 모델 저장 :", best_model_path)
+
+    training_seconds = time.time() - training_start_time
+
+    print("\n==========================================")
+    print(f"최고 Validation 정확도: {best_validation_accuracy:.2%}")
+    print(f"학습 시간 : {training_seconds:.1f}초")
+    print("저장된 모델 :", best_model_path)
+
+
+if __name__ == "__main__":
+    main()
