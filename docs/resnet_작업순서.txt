@@ -1,0 +1,11 @@
+git checkout Dev && git pull
+
+RESNET_ARCH=resnet18 RUN_NAME=r18_e20 NUM_EPOCHS=20 python src/resnet/train_resnet.py
+RESNET_ARCH=resnet18 RUN_NAME=r18_e20 NUM_EPOCHS=20 python src/resnet/fine_tune_resnet.py
+RESNET_ARCH=resnet18 RUN_NAME=r18_e20 python src/resnet/evaluate_resnet.py
+
+RESNET_ARCH=resnet50 RUN_NAME=r50_e20 NUM_EPOCHS=20 BATCH_SIZE=64 python src/resnet/train_resnet.py
+RESNET_ARCH=resnet50 RUN_NAME=r50_e20 NUM_EPOCHS=20 BATCH_SIZE=64 python src/resnet/fine_tune_resnet.py
+RESNET_ARCH=resnet50 RUN_NAME=r50_e20 python src/resnet/evaluate_resnet.py
+
+RESNET18_RUN=r18_e20 RESNET50_RUN=r50_e20 python src/resnet/benchmark_inference.py
