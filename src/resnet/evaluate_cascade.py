@@ -12,6 +12,9 @@
 # [환경변수]
 #   RESNET_ARCH : resnet18 (기본) 또는 resnet50
 #   RUN_NAME    : 학습 때 쓴 실험 이름 (기본 "default")
+#   STAGE1_BIAS : 1단계 정상(0) logit에 더할 보정치 (기본 0.0 = 보정 없음).
+#                 값이 클수록 불량 판정이 보수적이 되어 경계의 보통이 2단계로 넘어감.
+#                 tune_cascade_stage1_bias.py로 validation에서 찾은 값을 쓸 것
 #   BATCH_SIZE  : 배치 크기 (기본 128)
 #   DATA_DIR    : data/ 와 model/ 이 있는 프로젝트 루트 (기본: 이 저장소)
 #
@@ -49,6 +52,9 @@ project_dir = Path(__file__).resolve().parent.parent.parent
 RESNET_ARCH = os.environ.get("RESNET_ARCH", "resnet18")
 RUN_NAME = os.environ.get("RUN_NAME", "default")
 
+# 1단계 정상(0) logit 보정치 (0.0이면 기존과 완전히 동일하게 동작)
+STAGE1_BIAS = float(os.environ.get("STAGE1_BIAS", 0.0))
+
 batch_size = int(os.environ.get("BATCH_SIZE", 128))
 
 data_dir = Path(os.environ.get("DATA_DIR", project_dir))
@@ -66,9 +72,16 @@ stage2_model_path = (
 )
 
 # 결과는 기존 평가 결과와 다른 폴더에 저장 (덮어쓰기 없음)
-results_dir = (
-    project_dir / "test_results" / RESNET_ARCH / f"cascade_{RUN_NAME}"
-)
+# bias를 쓰면 폴더 이름에 값이 붙어서 보정 없는 결과와도 분리됨
+if STAGE1_BIAS != 0.0:
+    results_dir = (
+        project_dir / "test_results" / RESNET_ARCH
+        / f"cascade_{RUN_NAME}_bias{STAGE1_BIAS}"
+    )
+else:
+    results_dir = (
+        project_dir / "test_results" / RESNET_ARCH / f"cascade_{RUN_NAME}"
+    )
 
 class_names = ["우수", "보통", "불량"]
 
@@ -186,7 +199,12 @@ def main():
         for images, labels in test_loader:
             images = images.to(device, non_blocking=True)
 
-            stage1_output = stage1_model(images).argmax(dim=1)
+            # STAGE1_BIAS만큼 정상(0) logit을 키워서 불량 판정을 보수적으로 만듦
+            # (0.0이면 기존 argmax와 동일)
+            stage1_logits = stage1_model(images)
+            stage1_logits[:, 0] += STAGE1_BIAS
+            stage1_output = stage1_logits.argmax(dim=1)
+
             stage2_output = stage2_model(images).argmax(dim=1)
 
             # 1단계가 불량(1)이라 하면 최종 불량(2),
@@ -280,6 +298,7 @@ def main():
     record(f"2단계 모델 : {stage2_model_path.name}")
     record(f"  - 저장 시 validation macro F1 : "
            f"{stage2_checkpoint.get('validation_macro_f1', '정보없음')}")
+    record(f"1단계 정상 logit 보정치 (STAGE1_BIAS) : {STAGE1_BIAS}")
     record("")
     record("===== 최종 3-클래스 성능 =====")
     record(f"Test 장수 : {len(all_labels)}")
