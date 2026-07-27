@@ -1,0 +1,36 @@
+# 노후 건축물 등급 분류 프로젝트 의존성
+# 개발 환경 기준: Python 3.14.6
+#
+# 설치:
+#   pip install -r requirements.txt
+#
+# GPU(CUDA) 환경에서는 torch/torchvision을 먼저 전용 인덱스로 설치할 것.
+# 그렇지 않으면 CPU 전용 휠이 깔린다.
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+
+# --- 딥러닝 학습/추론 (src/) ---
+torch==2.13.0
+torchvision==0.28.0
+
+# --- 데이터 처리 / 평가 지표 ---
+# scikit-learn: classification_report, confusion_matrix
+#               + src/legacy_ml (SVM, KNN, DecisionTree, PCA, StandardScaler)
+numpy==2.5.1
+pandas==3.0.3
+scikit-learn==1.9.0
+Pillow==12.3.0
+
+# --- 시각화 (src/visual_check.py, src/offline_augmentation/, ppt_data/) ---
+matplotlib==3.11.0
+
+# --- 웹 서빙 (app/main.py) ---
+# 아래 4개는 현재 개발 환경에 미설치 상태라 버전을 고정하지 않았다.
+# 서빙을 돌릴 때 설치한 뒤 실제 버전으로 고정할 것.
+flask
+pymongo
+opencv-python
+grad-cam
+
+# --- RunPod GPU 테스트 / 리포트 (runpod_test/) ---
+runpod==1.11.0
+reportlab==5.0.0
