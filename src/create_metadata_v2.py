@@ -10,7 +10,8 @@ v1(create_matadata.py)과 달라진 점
 - Class_ID 혼합 JSON을 버리지 않고 구제 (대표 class_id = max 등급, is_mixed 플래그)
 - middle_id(결함 종류 7종) / middle_name 컬럼 추가
 - group_id를 파일명 파싱이 아니라 Raw_Data_Info.Raw_Data_ID에서 직접 읽음
-- 폴리곤을 annotations_v2.jsonl로 보존 (평탄화 [x1,y1,x2,y2,...] 원본 그대로, 1440x1080 기준)
+- 좌표를 annotations_v2.jsonl로 보존: Type="polygon"은 polygon(평탄화 [x1,y1,...]),
+  Type="bbox"는 bbox([x0,y0,x1,y1] 코너) - 모두 원본 픽셀 좌표계
 - 이미지 매칭을 rglob stem 딕셔너리 대신 라벨<->원천 경로 미러링 치환으로 결정적으로 수행
 
 image_path는 기존 CSV와 동일한 가상 포맷(D:/hn_old-building_raw/raw/images/...)으로
@@ -239,12 +240,16 @@ def main():
             })
 
             for ann_index, annotation in enumerate(annotations):
+                # annotation은 두 종류: Type="polygon"이면 polygon(평탄화 [x1,y1,...]),
+                # Type="bbox"면 bbox([x0,y0,x1,y1] 코너 좌표, 실측 검증 완료).
+                # 둘 다 원본 픽셀 좌표계이며, 해당 없는 필드는 빈 리스트로 남긴다.
                 annotation_records.append({
                     "source_data_id": source_data_id,
                     "ann_index": ann_index,
                     "class_id": str(annotation["Class_ID"]),
                     "type": annotation.get("Type", ""),
                     "polygon": annotation.get("polygon", []),
+                    "bbox": annotation.get("bbox", []),
                 })
 
     if not metadata_rows:

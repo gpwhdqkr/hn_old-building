@@ -168,10 +168,16 @@ def main():
                 continue
             sampled_annotations += 1
             spec = spec_by_id.loc[source_id]
-            polygon = record["polygon"]
-            xs = polygon[0::2]
-            ys = polygon[1::2]
-            if not xs or not ys:
+            # 좌표는 두 형태: polygon(평탄화 [x1,y1,...]) 또는 bbox([x0,y0,x1,y1] 코너)
+            polygon = record.get("polygon") or []
+            bbox = record.get("bbox") or []
+            if polygon:
+                xs = polygon[0::2]
+                ys = polygon[1::2]
+            elif len(bbox) == 4:
+                xs = [bbox[0], bbox[2]]
+                ys = [bbox[1], bbox[3]]
+            else:
                 continue
             if (max(xs) > spec["orig_width"] or max(ys) > spec["orig_height"]
                     or min(xs) < 0 or min(ys) < 0):
