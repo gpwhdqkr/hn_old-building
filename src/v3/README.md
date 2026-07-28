@@ -36,7 +36,13 @@ ARCH=resnet50 RUN_NAME=v3r50a python src/v3/train_binclf_v3.py
 ARCH=resnet50 RUN_NAME=v3r50a NUM_EPOCHS=15 python src/v3/fine_tune_binclf_v3.py
 ARCH=resnet50 RUN_NAME=v3r50a python src/v3/evaluate_binclf_v3.py
 ARCH=resnet50 RUN_NAME=v3r50a python src/v3/tune_threshold_binclf_v3.py   # 선택
+ARCH=resnet50 RUN_NAME=v3r50a python src/v3/layercam_binclf_v3.py         # 선택
 ```
+
+`layercam_binclf_v3.py`: 학습된 모델에 LayerCAM(다층 융합 히트맵)을 적용해
+결함 위치를 실제로 가리키는지 GT bbox로 채점(pointing game + 에너지 집중도)하고
+오버레이 이미지를 저장한다. 재학습 불필요. **실학습 모델로 채점해야 의미가 있고**,
+점수가 낮으면 위치 표시 용도로는 detection 모델이 필요하다는 신호다.
 
 환경변수/트러블슈팅은 `src/v2/README.md`와 동일 (DATA_DIR, BATCH_SIZE=64→OOM시 32,
 USE_CLAHE, EVAL_RESIZE_MODE=centercrop 기본, LIMIT_PER_SPLIT은 스모크 전용).
