@@ -160,9 +160,9 @@ def load_defect_bboxes():
     """annotations_v2.jsonl에서 결함(Class_ID 2·3) annotation의 bbox를
     캐시 좌표계(원본 좌표 × scale)로 변환해 dict로 반환한다.
 
-    annotation은 두 종류이며 둘 다 처리한다 (실측: polygon 45,790 / bbox 31,642):
-      - Type="polygon": polygon 평탄화 [x1,y1,x2,y2,...] → min/max로 bbox 계산
-      - Type="bbox"   : bbox [x0,y0,x1,y1] 코너 좌표 그대로 사용
+    annotations_v2.jsonl의 bbox 필드는 모든 annotation에 항상 존재한다
+    ([x0,y0,x1,y1] 코너, 폴리곤형은 전처리에서 min/max로 유도해 채움) —
+    따라서 여기서는 bbox만 읽으면 된다. polygon 필드는 정밀 윤곽 보존용.
 
     반환: (dict[source_data_id, list[(x0,y0,x1,y1)]], 제외된 퇴화/빈 annotation 수)
     피클 가능한 기본 타입만 담아 Windows spawn 워커에도 안전하게 복사된다.
@@ -192,19 +192,11 @@ def load_defect_bboxes():
             source_id = record["source_data_id"]
             cache_width, cache_height, scale = spec_by_id[source_id]
 
-            polygon = record.get("polygon") or []
             bbox = record.get("bbox") or []
-
-            if polygon:
-                xs = polygon[0::2]
-                ys = polygon[1::2]
-                raw_x0, raw_y0 = min(xs), min(ys)
-                raw_x1, raw_y1 = max(xs), max(ys)
-            elif len(bbox) == 4:
-                raw_x0, raw_y0, raw_x1, raw_y1 = bbox
-            else:
+            if len(bbox) != 4:
                 degenerate_count += 1
                 continue
+            raw_x0, raw_y0, raw_x1, raw_y1 = bbox
 
             x0 = max(0.0, raw_x0 * scale)
             y0 = max(0.0, raw_y0 * scale)

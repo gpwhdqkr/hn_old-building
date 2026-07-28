@@ -10,8 +10,9 @@ v1(create_matadata.py)과 달라진 점
 - Class_ID 혼합 JSON을 버리지 않고 구제 (대표 class_id = max 등급, is_mixed 플래그)
 - middle_id(결함 종류 7종) / middle_name 컬럼 추가
 - group_id를 파일명 파싱이 아니라 Raw_Data_Info.Raw_Data_ID에서 직접 읽음
-- 좌표를 annotations_v2.jsonl로 보존: Type="polygon"은 polygon(평탄화 [x1,y1,...]),
-  Type="bbox"는 bbox([x0,y0,x1,y1] 코너) - 모두 원본 픽셀 좌표계
+- 좌표를 annotations_v2.jsonl로 보존 (원본 픽셀 좌표계):
+  bbox([x0,y0,x1,y1] 코너)는 모든 annotation에 항상 존재 - 소비 코드는 bbox만 읽으면 됨.
+  polygon(평탄화 [x1,y1,...])은 Type="polygon"인 것만 - 정밀 윤곽 보존용
 - 이미지 매칭을 rglob stem 딕셔너리 대신 라벨<->원천 경로 미러링 치환으로 결정적으로 수행
 
 image_path는 기존 CSV와 동일한 가상 포맷(D:/hn_old-building_raw/raw/images/...)으로
@@ -242,14 +243,23 @@ def main():
             for ann_index, annotation in enumerate(annotations):
                 # annotation은 두 종류: Type="polygon"이면 polygon(평탄화 [x1,y1,...]),
                 # Type="bbox"면 bbox([x0,y0,x1,y1] 코너 좌표, 실측 검증 완료).
-                # 둘 다 원본 픽셀 좌표계이며, 해당 없는 필드는 빈 리스트로 남긴다.
+                # 소비 코드가 포맷 분기 없이 쓸 수 있도록 bbox는 "항상" 채운다
+                # (폴리곤형은 min/max로 유도). polygon 원본은 정밀 윤곽이 필요한
+                # 후속 작업(세그멘테이션 등)을 위해 그대로 보존한다.
+                polygon = annotation.get("polygon", [])
+                bbox = annotation.get("bbox", [])
+                if not bbox and polygon:
+                    xs = polygon[0::2]
+                    ys = polygon[1::2]
+                    bbox = [min(xs), min(ys), max(xs), max(ys)]
+
                 annotation_records.append({
                     "source_data_id": source_data_id,
                     "ann_index": ann_index,
                     "class_id": str(annotation["Class_ID"]),
                     "type": annotation.get("Type", ""),
-                    "polygon": annotation.get("polygon", []),
-                    "bbox": annotation.get("bbox", []),
+                    "polygon": polygon,
+                    "bbox": bbox,
                 })
 
     if not metadata_rows:
