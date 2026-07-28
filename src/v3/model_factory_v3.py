@@ -6,7 +6,9 @@
 #
 # 지원 백본 (ARCH env):
 #   resnet50 (기본)  : 1차 표준. 기존 resnet 계열 unfreeze 관례(layer4+fc) 계승
+#   resnet18         : 경량 resnet — 구버전 binclf(RESNET_ARCH=resnet18) 관례 계승
 #   efficientnet_b0 / efficientnet_b2 : 경량 비교용
+#   mobilenet_v2     : 최경량 비교용 — 구버전 binclf 관례(features[-1]+classifier) 계승
 #   convnext_tiny    : 텍스처 성능 상한 실험용 — AdamW 강제 (Adam이면 성능 급락 흔함)
 # ============================================================
 
@@ -17,16 +19,27 @@ from torchvision.models import (
     convnext_tiny,
     efficientnet_b0,
     efficientnet_b2,
+    mobilenet_v2,
+    resnet18,
     resnet50,
 )
 from torchvision.models import (
     ConvNeXt_Tiny_Weights,
     EfficientNet_B0_Weights,
     EfficientNet_B2_Weights,
+    MobileNet_V2_Weights,
+    ResNet18_Weights,
     ResNet50_Weights,
 )
 
-SUPPORTED_ARCHS = ["resnet50", "efficientnet_b0", "efficientnet_b2", "convnext_tiny"]
+SUPPORTED_ARCHS = [
+    "resnet50", "resnet18",
+    "efficientnet_b0", "efficientnet_b2",
+    "mobilenet_v2", "convnext_tiny",
+]
+
+# resnet 계열은 fc/layer4 구조가 동일해서 분기를 공유한다
+RESNET_ARCHS = ("resnet50", "resnet18")
 
 
 def create_model(arch, num_classes, use_pretrained_weights):
@@ -36,6 +49,18 @@ def create_model(arch, num_classes, use_pretrained_weights):
             weights=ResNet50_Weights.DEFAULT if use_pretrained_weights else None
         )
         model.fc = nn.Linear(model.fc.in_features, num_classes)
+
+    elif arch == "resnet18":
+        model = resnet18(
+            weights=ResNet18_Weights.DEFAULT if use_pretrained_weights else None
+        )
+        model.fc = nn.Linear(model.fc.in_features, num_classes)
+
+    elif arch == "mobilenet_v2":
+        model = mobilenet_v2(
+            weights=MobileNet_V2_Weights.DEFAULT if use_pretrained_weights else None
+        )
+        model.classifier[1] = nn.Linear(model.classifier[1].in_features, num_classes)
 
     elif arch == "efficientnet_b0":
         model = efficientnet_b0(
@@ -63,7 +88,7 @@ def create_model(arch, num_classes, use_pretrained_weights):
 
 def head_parameters(model, arch):
     """분류층(head) 파라미터 이터레이터."""
-    if arch == "resnet50":
+    if arch in RESNET_ARCHS:
         return model.fc.parameters()
     return model.classifier.parameters()
 
@@ -81,12 +106,20 @@ def unfreeze_for_finetune(model, arch):
     for parameter in model.parameters():
         parameter.requires_grad = False
 
-    if arch == "resnet50":
+    if arch in RESNET_ARCHS:
         for parameter in model.layer4.parameters():
             parameter.requires_grad = True
         for parameter in model.fc.parameters():
             parameter.requires_grad = True
         return "layer4 + fc"
+
+    if arch == "mobilenet_v2":
+        # 구버전 binclf 관례: 마지막 특징 블록 하나만 (features[-2:]가 아님)
+        for parameter in model.features[-1].parameters():
+            parameter.requires_grad = True
+        for parameter in model.classifier.parameters():
+            parameter.requires_grad = True
+        return "features[-1] + classifier"
 
     # efficientnet/convnext: 마지막 두 특징 블록 + classifier
     for block in model.features[-2:]:
@@ -99,10 +132,15 @@ def unfreeze_for_finetune(model, arch):
 
 def build_finetune_param_groups(model, arch, lr_backbone, lr_head):
     """2단계용 차등 학습률 param group (백본 쪽은 아주 작게, head는 그보다 크게)."""
-    if arch == "resnet50":
+    if arch in RESNET_ARCHS:
         return [
             {"params": model.layer4.parameters(), "lr": lr_backbone},
             {"params": model.fc.parameters(), "lr": lr_head},
+        ]
+    if arch == "mobilenet_v2":
+        return [
+            {"params": model.features[-1].parameters(), "lr": lr_backbone},
+            {"params": model.classifier.parameters(), "lr": lr_head},
         ]
     backbone_params = []
     for block in model.features[-2:]:
@@ -119,11 +157,14 @@ def set_frozen_modules_eval(model, arch):
     가중치뿐 아니라 BatchNorm 이동 통계도 바뀌지 않게 하는 기존 관례.
     (convnext는 LayerNorm이라 통계 오염이 없지만 일관성을 위해 동일 처리)
     """
-    if arch == "resnet50":
+    if arch in RESNET_ARCHS:
         model.bn1.eval()
         model.layer1.eval()
         model.layer2.eval()
         model.layer3.eval()
+    elif arch == "mobilenet_v2":
+        for block in model.features[:-1]:
+            block.eval()
     else:
         for block in model.features[:-2]:
             block.eval()

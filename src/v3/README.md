@@ -41,6 +41,11 @@ ARCH=resnet50 RUN_NAME=v3r50a python src/v3/tune_threshold_binclf_v3.py   # 선�
 환경변수/트러블슈팅은 `src/v2/README.md`와 동일 (DATA_DIR, BATCH_SIZE=64→OOM시 32,
 USE_CLAHE, EVAL_RESIZE_MODE=centercrop 기본, LIMIT_PER_SPLIT은 스모크 전용).
 
+**ARCH 지원 백본 (v2보다 2종 추가)**: `resnet50`(기본) / `resnet18` /
+`efficientnet_b0` / `efficientnet_b2` / `mobilenet_v2` / `convnext_tiny`.
+resnet18(layer4+fc)과 mobilenet_v2(features[-1]+classifier)의 fine-tune 해제
+범위는 구버전 `src/binclf/` 검증 관례를 그대로 계승했다.
+
 ## 산출물 위치
 
 | 파일 | 내용 |
