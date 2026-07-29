@@ -11,20 +11,20 @@ from pymongo import MongoClient
 
 # 💡 두 개의 로컬 모듈을 임포트합니다.
 from ai_engine import ApartmentClassifier
-from cv_processor import draw_defect_bounding_boxes, draw_excellent_text_stamp
+from cv_processor import draw_defect_heatmap_overlay, draw_excellent_text_stamp
 
 app = Flask(__name__)
 
 # main.py 상단 수정
 project_dir = Path(__file__).resolve().parent
 
-# EfficientNet-B0 이름으로 교체된 가중치 파일 경로
-model_path = project_dir.parent / "model" / "best_efficientnet_b0_finetuned_epoch20.pth"
+# 최종 선정 모델: ConvNeXt-Tiny 이원화(binclf_v3, 448 입력) 가중치 경로
+model_path = project_dir.parent / "model" / "best_convnext_tiny_binclf_v3_finetuned_v3cta.pth"
 
 # 🔒 [클라우드/로컬 공용] CUDA 환경 유무를 자동 체크하여 디바이스 할당
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# 서버가 켜질 때 EfficientNet 기반 객체를 메모리에 단 한 번 올립니다.
+# 서버가 켜질 때 ConvNeXt-Tiny 기반 객체를 메모리에 단 한 번 올립니다.
 classifier = ApartmentClassifier(model_path, device)
 
 # =========================================================================
@@ -33,8 +33,8 @@ classifier = ApartmentClassifier(model_path, device)
 # 클라우드 배포 시 환경 변수(Environment Variable) 환경에 맞추어 주소를 유연하게 전환 가능합니다.
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
 mongo_client = MongoClient(MONGO_URI)
-db = mongo_client["apartment_inspection_db"]  
-collection = db["inspection_logs"]             
+db = mongo_client["apartment_inspection_db"]
+collection = db["inspection_logs"]
 # =========================================================================
 
 @app.route('/')
@@ -44,10 +44,10 @@ def home():
 @app.route('/predict', methods=['POST'])
 def predict():
     uploaded_file = request.files.get('house_image')
-    
+
     if not uploaded_file or uploaded_file.filename == '':
         return '<script>alert("검사할 주택 사진 파일이 선택되지 않았습니다."); window.location.href = "/";</script>'
-        
+
     # =========================================================================
     # 🔒 [방어 가드 1단계] 파일 용량 체크 (하드디스크 저장 전 50MB 이하 제한)
     # =========================================================================
@@ -63,17 +63,17 @@ def predict():
     # 🔒 [방어 가드 2단계] 이미지 확장자 필터링
     # =========================================================================
     allowed_extensions = {'.png', '.jpg', '.jpeg'}
-    file_extension = os.path.splitext(uploaded_file.filename)[1].lower() 
-    
+    file_extension = os.path.splitext(uploaded_file.filename)[1].lower()
+
     if file_extension not in allowed_extensions:
         return '<script>alert("허용되지 않은 파일 형식입니다. JPG, JPEG, PNG 이미지만 업로드해 주세요."); window.location.href = "/";</script>'
-        
+
     # 폴더 구조 빌드
     origin_dir = os.path.join('static', 'images', 'origin')
     result_dir = os.path.join('static', 'images', 'result')
     os.makedirs(origin_dir, exist_ok=True)
     os.makedirs(result_dir, exist_ok=True)
-    
+
     unique_filename = f"{uuid.uuid4().hex}{file_extension}"
     file_path = os.path.join(origin_dir, unique_filename)
     uploaded_file.save(file_path)
@@ -84,17 +84,17 @@ def predict():
     try:
         img_array = np.fromfile(file_path, np.uint8)
         check_img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-        
+
         if check_img is None:
             raise ValueError("손상되었거나 올바르지 않은 이미지 파일 구조")
-            
+
         h, w, _ = check_img.shape
-        
+
         if w > 1024 or h > 1024:
             if os.path.exists(file_path):
                 os.remove(file_path)
             return f'<script>alert("이미지 해상도가 너무 큽니다. 가로 및 세로가 1024픽셀 이하인 사진을 올려주세요. (업로드된 크기: {w}x{h})"); window.location.href = "/";</script>'
-            
+
     except Exception as e:
         if os.path.exists(file_path):
             os.remove(file_path)
@@ -104,35 +104,50 @@ def predict():
 
     result_file_name = f"result_{unique_filename}"
     result_file_path = os.path.join(result_dir, result_file_name)
-    
-    # 방어적 제어 변수 선언
+
+    # 방어적 제어 변수 선언 (에러 시 프론트로 None이 내려가도록)
     prediction = -1
     result_status = "분류 실패 (프로세스 오류)"
-    grayscale_cam = None
-    display_image_path = file_path 
+    defect_probability = None
+    inference_time_ms = None
+    peak_x = None
+    peak_y = None
+    display_image_path = file_path
 
     try:
-        # ❶ AI 엔진 호출 (ai_engine.py) - 순수 AI 추론 시간은 내부에서 측정되므로 수신값은 언더스코어(_) 처리합니다.
-        prediction, result_status, grayscale_cam, _ = classifier.predict_and_get_cam(file_path)
-        
+        # ❶ AI 엔진 호출 (ai_engine.py) — 이원화 판정 + 불량 확률 + LayerCAM + 추론 ms
+        (prediction, result_status, defect_probability,
+         grayscale_cam, cam_peak_xy, inference_time_ms) = classifier.predict_and_get_cam(file_path)
+
         # ❷ OpenCV 이미지 프로세서 호출 (cv_processor.py)
-        if prediction in [1, 2] and grayscale_cam is not None:
-            draw_defect_bounding_boxes(file_path, result_file_path, grayscale_cam)
+        if prediction == 1 and grayscale_cam is not None:
+            # 불량: 히트맵 오버레이 + 피크 마커. 반환값은 원본 좌표계 피크 (x, y)
+            peak_x, peak_y = draw_defect_heatmap_overlay(
+                file_path, result_file_path, grayscale_cam, cam_peak_xy
+            )
             display_image_path = result_file_path
         elif prediction == 0:
             draw_excellent_text_stamp(file_path, result_file_path)
             display_image_path = result_file_path
-            
+
     except Exception as e:
         print(f"❌ 추론/시각화 파이프라인 에러 발생: {e}")
         result_status = "분류 실패 (에러 발생)"
 
-    # 4. 웹 표준 경로 슬래시 정제
+    # 웹 표준 경로 슬래시 정제
     web_origin_path = f"/{file_path.replace('\\', '/')}"
     web_result_path = f"/{display_image_path.replace('\\', '/')}"
 
+    # 판정된 클래스의 확률 % (우수면 1-p, 불량이면 p) — 프론트 표시용
+    if defect_probability is None:
+        probability_percent = None
+    elif prediction == 1:
+        probability_percent = round(defect_probability * 100, 1)
+    else:
+        probability_percent = round((1 - defect_probability) * 100, 1)
+
     # =========================================================================
-    # 🍃 [MongoDB 데이터 저장] 최종 정의한 BSON 구조 매핑 (밀리초 필드 완벽 제외)
+    # 🍃 [MongoDB 데이터 저장] 기존 BSON 구조 유지 + v3 추론 필드 추가
     # =========================================================================
     if "실패" in result_status:
         db_status = "오류"
@@ -144,10 +159,14 @@ def predict():
         "origin_id": ObjectId(),                         # 원본 참조용 고유 ID
         "result_file_name": result_file_name,            # 결과 파일명
         "save_path": display_image_path,                 # 서버 내부 물리 저장 경로 (역슬래시 유지)
-        "status": db_status,                             # "우수" 또는 "불량"
-        "create_at": datetime.utcnow()                   # ISO UTC 타임스탬프 형식 (2026-07-27T15:...)
+        "status": db_status,                             # "우수" / "불량" / "오류"
+        "defect_probability": (                          # 불량 확률 원값 (분석/재튜닝용)
+            round(defect_probability, 6) if defect_probability is not None else None
+        ),
+        "inference_time_ms": inference_time_ms,          # 추론 소요 시간 (ms)
+        "create_at": datetime.utcnow()                   # ISO UTC 타임스탬프 형식
     }
-    
+
     try:
         collection.insert_one(log_document)
     except Exception as mongo_err:
@@ -155,11 +174,18 @@ def predict():
         print(f"❌ MongoDB 저장 오류: {mongo_err}")
     # =========================================================================
 
+    # 프론트 연동 5종 출력 — 변수 설명은 app/FRONTEND_GUIDE.md 참고
     return render_template(
-        'result.html', 
-        user_image_url=web_origin_path,  
-        cam_image_url=web_result_path,   
-        ai_result=result_status          
+        'result.html',
+        # -- 기존 변수 (하위 호환 유지) --
+        user_image_url=web_origin_path,      # 원본 이미지 URL
+        cam_image_url=web_result_path,       # ① 판정 근거 시각화 이미지 URL (히트맵/스탬프)
+        ai_result=result_status,             # ② 판정 결과: "우수" / "불량" / "분류 실패 (...)"
+        # -- v3 신규 변수 --
+        probability_percent=probability_percent,  # ③ 판정 클래스의 확률 % (0~100, 소수 1자리)
+        peak_x=peak_x,                       # ④ 확인 요망 지점 x (원본 픽셀 좌표, 근사치. 우수면 None)
+        peak_y=peak_y,                       # ④ 확인 요망 지점 y (원본 픽셀 좌표, 근사치. 우수면 None)
+        inference_ms=inference_time_ms       # ⑤ 이미지 1장 추론 속도 (ms)
     )
 
 if __name__ == '__main__':
