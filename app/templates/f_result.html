@@ -1,0 +1,44 @@
+<!-- templates/result.html 전체를 아래 코드로 완전히 덮어씌워 주세요 -->
+<footer class="result-panel">
+    <div class="result-summary">
+        <div class="status-meta">
+            <span class="meta-tag inference-speed">⚡ 추론 속도: {{ inference_ms }}ms</span>
+            {% if peak_x and peak_y %}
+            <span class="meta-tag defect-coord">🎯 검출 정점: X({{ peak_x }}px), Y({{ peak_y }}px)</span>
+            {% endif %}
+        </div>
+
+        <div class="chart-container">
+            {% if "우수" in ai_result %}
+            <span class="label-good">우수 {{ probability_percent }}%</span>
+            <div class="bar-chart">
+                <div class="bar-bad-fill" style="width: 0%;"></div>
+            </div>
+            <span class="label-bad" style="opacity: 0.3;">0% 불량</span>
+            {% else %}
+            <span class="label-good" style="opacity: 0.3;">우수 {{ (100 - probability_percent)|round(1) }}%</span>
+            <div class="bar-chart">
+                <div class="bar-bad-fill" style="width: {{ probability_percent }}%;"></div>
+            </div>
+            <span class="label-bad">불량 {{ probability_percent }}%</span>
+            {% endif %}
+        </div>
+
+        {% if "우수" in ai_result %}
+        <h2 class="result-title text-green">✅ 판정 결과: 本 건축물은 [우수] 상태로 분석되었습니다.</h2>
+        <p class="result-desc">
+            ConvNeXt-Tiny 이원화 분석 모델 가동 결과, 외벽 구조 표면의 안정성이 검증되었습니다.<br>
+            시스템 검증 신뢰도 <strong>{{ probability_percent }}%</strong>로 정중앙에 녹색 안전 등급 스탬프를 마킹합니다.
+        </p>
+        {% else %}
+        <h2 class="result-title text-red">⚠️ 판정 결과: 本 건축물은 [불량] 상태로 분석되었습니다.</h2>
+        <p class="result-desc">
+            해당 영역<span class="highlight-red">(Red Bounding Box)</span>에서 표면 음영의 급격한 불연속 패턴이 식별되었습니다.<br>
+            인공지능 네트워크 최종 판단 가중치 예측 신뢰도: <strong>{{ probability_percent }}%</strong>
+        </p>
+        {% endif %}
+    </div>
+</footer>
+
+<!-- 🔒 [주소 추출 파이프 보정] main.py가 전달한 절대경로 주소를 정 가공 없이 안전하게 홀딩하도록 수정 완료 -->
+<div id="backendUrls" data-origin="{{ user_image_url }}" data-result="{{ cam_image_url }}" data-status="{{ ai_result }}" class="hide"></div>

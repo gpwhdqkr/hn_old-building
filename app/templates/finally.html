@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 노후 건물 진단 시스템</title>
+    <!-- templates/finally.html 상단 헤더 -->
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="system-container">
+        <!-- 상단 헤더 -->
+        <header class="system-header">
+            <h1>AI 노후 건물 진단 시스템</h1>
+            <div class="system-status" id="systemStatus">[SYSTEM READY: AWAITING INPUT]</div>
+        </header>
+
+        <!-- 메인 워크스페이스 -->
+        <main class="workspace">
+            <!-- 좌측 조작반 -->
+            <section class="control-panel">
+                <!-- 1번 상태: 파일 투하 가이드 상자 -->
+                <div class="upload-zone" id="uploadZone">
+                    <input type="file" id="fileInput" name="house_image" accept="image/*" hidden>
+                    <div class="upload-box" id="uploadBox">
+                        <div class="upload-icon">📁</div>
+                        <p id="uploadText">사진을 여기로 드래그하거나<br>클릭하여 업로드하세요</p>
+                    </div>
+                </div>
+
+                <!-- 3번 상태: 실시간 모델 추론 흐름 기동 터미널 -->
+                <div class="log-zone hide" id="logZone">
+                    <div class="code-log">
+                        <p>> [INFO] Initializing ConvNeXt-Tiny Engine...</p>
+                        <p>> [INFO] Connecting to CUDA core...</p>
+                        <p>> [DATA] Transferring payload to model tensor...</p>
+                        <p class="blink">> [COMPUTING] LayerCAM tracking in progress...</p>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="progressBar"></div>
+                        <span class="progress-text" id="progressText">[ANALYZING... 0%]</span>
+                    </div>
+                </div>
+
+                <!-- 통합 기동 스위치 -->
+                <button class="btn-diagnose" id="btnDiagnose" disabled>진단 시작</button>
+            </section>
+
+            <!-- 우측 모니터 스크린 -->
+            <section class="viewer-panel">
+                <div class="image-viewport" id="imageViewport">
+                    <!-- 초기 가상 디스플레이 그리드 격자 -->
+                    <div class="grid-background" id="gridBg"></div>
+                    <!-- 로컬 브라우저가 수신한 원본 프리뷰 -->
+                    <img id="previewImg" src="" alt="건물 이미지" class="hide">
+                    <!-- OpenCV 인코딩 처리가 완료되어 반환된 타겟 이미지 -->
+                    <img id="resultImg" src="" alt="진단 결과 이미지" class="hide">
+                    <!-- 동적 스캔 라인 스틱 -->
+                    <div class="laser-line hide" id="laserLine"></div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 4번 상태: 백엔드 main.py의 result.html 텍스트 스트림이 투하될 동적 영역 -->
+        <div id="dynamicResult" class="hide"></div>
+    </div>
+
+    <!-- templates/finally.html 맨 하단 스크립트 -->
+<script src="script.js"></script>
+</body>
+</html>

@@ -2,7 +2,8 @@ import os
 import uuid
 from datetime import datetime
 from pathlib import Path
-from flask import Flask, render_template, request
+# ➔ [수정 코드] 맨 뒤에 ', send_from_directory'를 추가합니다.
+from flask import Flask, render_template, request, send_from_directory
 import torch
 import cv2
 import numpy as np
@@ -14,9 +15,22 @@ from ai_engine import ApartmentClassifier
 from cv_processor import draw_defect_bounding_boxes, draw_excellent_text_stamp
 
 app = Flask(__name__)
-
 # main.py 상단 수정
 project_dir = Path(__file__).resolve().parent
+
+# =========================================================================
+# 🔒 [프론트 구조 구원 가드] templates 폴더 내 정적 파일 강제 매핑 규칙
+# =========================================================================
+@app.route('/style.css')
+def serve_css():
+    # 브라우저가 /style.css를 요청하면 templates 폴더 안에서 찾아 반환합니다.
+    return send_from_directory('templates', 'style.css')
+
+@app.route('/script.js')
+def serve_script():
+    # 브라우저가 /script.js를 요청하면 templates 폴더 안에서 찾아 반환합니다.
+    return send_from_directory('templates', 'script.js')
+# =========================================================================
 
 # 최종 선정 모델: ConvNeXt-Tiny 이원화(binclf_v3, 448 입력) 가중치 경로
 model_path = project_dir.parent / "model" / "best_convnext_tiny_binclf_v3_finetuned_v3cta.pth"
@@ -39,7 +53,7 @@ collection = db["inspection_logs"]
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    return render_template('finally.html')
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -177,7 +191,7 @@ def predict():
 
     # 프론트 연동 5종 출력 — 변수 설명은 app/FRONTEND_GUIDE.md 참고
     return render_template(
-        'result.html',
+        'f_result.html',
         # -- 기존 변수 (하위 호환 유지) --
         user_image_url=web_origin_path,      # 원본 이미지 URL
         cam_image_url=web_result_path,       # ① 판정 근거 시각화 이미지 URL (결함 박스/스탬프)
