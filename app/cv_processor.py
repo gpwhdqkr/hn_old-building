@@ -51,36 +51,24 @@ def _normalize_cam(grayscale_cam):
     return np.clip(grayscale_cam, 0.0, 1.0)
 
 
-def _cam_region_in_origin(width, height, crop_offset_xy=None):
-    """전처리(Resize 512 짧은 변 → 448 크롭)에서 히트맵(448×448)이
+def _cam_region_in_origin(width, height):
+    """전처리(Resize 512 짧은 변 → CenterCrop 448)에서 히트맵(448×448)이
     원본 이미지의 어느 영역에 대응하는지 (x0, y0, 한 변 픽셀)를 역산한다.
 
-    crop_offset_xy: 판정 근거 크롭의 좌상단 (x, y) — 리사이즈(짧은 변 512)
-    좌표계 (ai_engine 5-crop TTA가 전달). None이면 기존 중앙 크롭으로 간주.
-
-    모델은 이미지 전체가 아니라 이 정사각 영역만 보고 판정하므로,
+    모델은 이미지 전체가 아니라 이 중앙 정사각 영역만 보고 판정하므로,
     박스를 원본 전체 좌표에 그대로 그리면 위치가 어긋난다 (역매핑 필수).
     """
     ratio = EVAL_RESIZE_SHORT / min(width, height)
     crop_size = int(round(INPUT_SIZE / ratio))
     crop_size = min(crop_size, width, height)  # 반올림으로 원본을 넘는 것 방지
-    if crop_offset_xy is None:
-        x0 = (width - crop_size) // 2
-        y0 = (height - crop_size) // 2
-    else:
-        # 리사이즈 좌표 → 원본 좌표 역변환 후, 반올림 오차로 원본을 넘지 않게 클램프
-        x0 = max(0, min(int(round(crop_offset_xy[0] / ratio)), width - crop_size))
-        y0 = max(0, min(int(round(crop_offset_xy[1] / ratio)), height - crop_size))
+    x0 = (width - crop_size) // 2
+    y0 = (height - crop_size) // 2
     return x0, y0, crop_size
 
 
-def draw_defect_bounding_boxes(file_path, result_file_path, grayscale_cam, cam_peak_xy,
-                               crop_offset_xy=None):
+def draw_defect_bounding_boxes(file_path, result_file_path, grayscale_cam, cam_peak_xy):
     """LayerCAM 히트맵을 이진화해 결함 근사 영역에 빨간 박스를 그린다.
     (히트맵·마커는 이미지에 그리지 않는다 — 최종 확정 사양)
-
-    crop_offset_xy: 판정 근거 크롭의 좌상단 (리사이즈 좌표계) — 5-crop TTA에서
-    최대 확률 크롭이 중앙이 아닐 수 있어 역매핑 기준으로 필요. None이면 중앙 크롭.
 
     반환: 원본 이미지 좌표계의 히트맵 피크 (x, y) — 이미지에는 표시하지 않지만
     프론트 데이터(④ 확인 요망 지점)로 전달된다. 박스·피크 모두 히트맵 기반
@@ -91,7 +79,7 @@ def draw_defect_bounding_boxes(file_path, result_file_path, grayscale_cam, cam_p
     # 업로드된 원본 이미지 로드 (최대 가로/세로 1024 이하 상태)
     output_img = _read_img(file_path)
     h, w, _ = output_img.shape
-    x0, y0, crop_size = _cam_region_in_origin(w, h, crop_offset_xy)
+    x0, y0, crop_size = _cam_region_in_origin(w, h)
 
     # 1. 히트맵을 원본 대응 영역 크기로 확대 후 이진화 → 컨투어 추출
     cam_resized = cv2.resize(cam, (crop_size, crop_size), interpolation=cv2.INTER_LINEAR)
