@@ -129,16 +129,18 @@ def predict():
     display_image_path = file_path
 
     try:
-        # ❶ AI 엔진 호출 (ai_engine.py) — 이원화 판정 + 불량 확률 + LayerCAM + 추론 ms
+        # ❶ AI 엔진 호출 (ai_engine.py) — 5-crop TTA 이원화 판정 + 최대 불량 확률
+        #    + 최대 확률 크롭의 LayerCAM/크롭 오프셋 + 추론 ms
         (prediction, result_status, defect_probability,
-         grayscale_cam, cam_peak_xy, inference_time_ms) = classifier.predict_and_get_cam(file_path)
+         grayscale_cam, cam_peak_xy, crop_offset_xy,
+         inference_time_ms) = classifier.predict_and_get_cam(file_path)
 
         # ❷ OpenCV 이미지 프로세서 호출 (cv_processor.py)
         if prediction == 1 and grayscale_cam is not None:
             # 불량: 결함 근사 박스 드로잉 (최종 확정 사양 — 히트맵/마커 미표시).
             # 반환값은 원본 좌표계 피크 (x, y) — 데이터로만 프론트에 전달
             peak_x, peak_y = draw_defect_bounding_boxes(
-                file_path, result_file_path, grayscale_cam, cam_peak_xy
+                file_path, result_file_path, grayscale_cam, cam_peak_xy, crop_offset_xy
             )
             display_image_path = result_file_path
         elif prediction == 0:

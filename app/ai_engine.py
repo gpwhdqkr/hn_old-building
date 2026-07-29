@@ -141,30 +141,60 @@ class ApartmentClassifier:
             self.model.features[-3], self.model.features[-2], self.model.features[-1]
         ])
 
-        # ❹ 전처리: v3 평가 경로와 동일 (짧은 변 512 리사이즈 → 중앙 448 크롭).
-        # Resize(512)는 정수 인자 = 짧은 변 기준 종횡비 유지 — Resize((512,512)) 아님!
+        # ❹ 전처리: v3 평가 경로와 동일 배율 (짧은 변 512 리사이즈, 종횡비 유지).
+        # Resize(512)는 정수 인자 = 짧은 변 기준 — Resize((512,512)) 아님!
         # v3cta는 CLAHE 미사용 런이므로 서빙에도 CLAHE를 넣지 않는다.
-        self.transform = transforms.Compose([
-            transforms.Resize(EVAL_RESIZE_SHORT),
-            transforms.CenterCrop(INPUT_SIZE),
+        #
+        # [5-crop TTA] 서빙 판정은 중앙 1곳이 아닌 네 모서리+중앙 5개 크롭의
+        # 최대 불량 확률로 한다. 중앙 크롭만 쓰면 세로/가로로 긴 사진의 가장자리
+        # 결함이 시야 밖으로 잘려 미탐이 되기 때문(실내 벽 가장자리 균열 사례).
+        # 각 크롭은 학습(RandomResizedCrop)·평가와 동일 배율의 448 패치이므로
+        # 모델 입력 분포는 그대로다 — 재학습 불필요, 출력 집계만 바뀐다.
+        self.resize = transforms.Resize(EVAL_RESIZE_SHORT)
+        self.to_input = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
 
+    @staticmethod
+    def _five_crop_offsets(resized_width, resized_height):
+        """리사이즈 좌표계의 5-crop 좌상단 오프셋 (네 모서리 + 중앙).
+
+        짧은 변이 512라 두 변 모두 INPUT_SIZE(448) 이상임이 보장된다.
+        정사각형에 가까운 이미지는 오프셋이 겹칠 수 있어 중복 제거한다.
+        """
+        span_x = resized_width - INPUT_SIZE
+        span_y = resized_height - INPUT_SIZE
+        offsets = [
+            (0, 0), (span_x, 0), (0, span_y), (span_x, span_y),
+            (span_x // 2, span_y // 2),  # 중앙은 반드시 마지막 (CAM 우선순위 규칙)
+        ]
+        return offsets
+
     def predict_and_get_cam(self, file_path):
-        """이미지 1장을 추론해 프론트 연동 5종 출력의 원천 데이터를 반환한다.
+        """이미지 1장을 5-crop TTA로 추론해 프론트 연동 5종 출력의 원천 데이터를 반환한다.
 
         반환 튜플:
           prediction         : 0=우수, 1=불량 (운영 임계값 비교 판정)
           result_status      : "우수" / "불량"
-          defect_probability : 불량 softmax 확률 0~1 (우수 확률 = 1 - 이 값)
-          grayscale_cam      : LayerCAM 융합 히트맵 448×448 (0~1) — 우수면 None
+          defect_probability : 5개 크롭 중 최대 불량 확률 0~1 (우수 확률 = 1 - 이 값)
+          grayscale_cam      : 최대 확률 크롭의 LayerCAM 히트맵 448×448 (0~1) — 우수면 None
           cam_peak_xy        : 히트맵 최대점 (x, y) — 448 크롭 좌표계, 우수면 None
+          crop_offset_xy     : 판정 근거 크롭의 좌상단 (x, y) — 리사이즈(짧은 변 512)
+                               좌표계. cv_processor의 원본 역매핑에 필요. 우수면 None
           inference_time_ms  : 분류 + LayerCAM 포함 순수 연산 시간 (정수 ms)
         """
         # [파일 입출력/전처리는 시간 측정 범위 밖]
         image = Image.open(file_path).convert('RGB')
-        image_tensor = self.transform(image).unsqueeze(0).to(self.device)
+        resized = self.resize(image)
+        resized_width, resized_height = resized.size
+        offsets = self._five_crop_offsets(resized_width, resized_height)
+
+        # 5개 크롭을 배치 1회 forward로 처리 (크롭별 5회 호출보다 빠름)
+        crop_batch = torch.stack([
+            self.to_input(resized.crop((x, y, x + INPUT_SIZE, y + INPUT_SIZE)))
+            for x, y in offsets
+        ]).to(self.device)
 
         # =========================================================================
         # ⏱️ [추론 시간 측정 시작] — GPU 환경(CUDA)일 때만 synchronize 가드
@@ -175,10 +205,12 @@ class ApartmentClassifier:
 
         start_time = time.perf_counter()
 
-        # 1. 이원화 분류 (메모리 절약을 위해 inference_mode 사용)
+        # 1. 이원화 분류: 크롭별 불량 확률 → 최대값 판정 (메모리 절약 inference_mode)
         with torch.inference_mode():
-            outputs = self.model(image_tensor)
-            defect_probability = torch.softmax(outputs, dim=1)[0, 1].item()
+            outputs = self.model(crop_batch)
+            crop_probs = torch.softmax(outputs, dim=1)[:, 1]
+            best_index = int(torch.argmax(crop_probs).item())
+            defect_probability = crop_probs[best_index].item()
 
         # argmax가 아닌 운영 임계값 판정 (불량 recall 하한 보장 지점)
         prediction = 1 if defect_probability >= self.threshold else 0
@@ -186,11 +218,25 @@ class ApartmentClassifier:
 
         grayscale_cam = None
         cam_peak_xy = None
+        crop_offset_xy = None
 
-        # 2. 불량 판정일 때만 LayerCAM 역추적 (backward 필요 → enable_grad)
+        # 2. 불량 판정일 때만 LayerCAM 역추적 (backward → enable_grad)
+        #
+        # [CAM 크롭 선정 규칙] 판정은 최대 확률이지만, CAM은 중앙 크롭이 스스로
+        # 임계값을 넘으면 중앙 크롭에 건다. 확신 케이스는 여러 크롭이 확률 1.0
+        # 동률이라 argmax가 임의의 모서리 크롭을 고르는데, 모서리 크롭은 결함이
+        # 시야 가장자리에 걸려 박스 품질이 나빠진다(균열사진.jpg 회귀 사례).
+        # 중앙이 임계값 미달일 때만(=중앙 단독으론 미탐이던 케이스) 모서리 크롭 사용.
         if prediction == 1:
+            center_index = len(offsets) - 1  # _five_crop_offsets에서 중앙은 마지막
+            if crop_probs[center_index].item() >= self.threshold:
+                cam_index = center_index
+            else:
+                cam_index = best_index
+            crop_offset_xy = offsets[cam_index]
+            best_crop_tensor = crop_batch[cam_index:cam_index + 1].clone()
             with torch.enable_grad():
-                grayscale_cam = self.cam.compute(image_tensor.clone(), class_index=1)
+                grayscale_cam = self.cam.compute(best_crop_tensor, class_index=1)
             peak_row, peak_col = np.unravel_index(
                 np.argmax(grayscale_cam), grayscale_cam.shape
             )
@@ -206,11 +252,11 @@ class ApartmentClassifier:
         # 🔒 [클라우드 필수 - VRAM 방어 가드]
         # 다중 사용자 접근 시 LayerCAM 잔여 활성값/그래디언트가 메모리에 쌓여
         # OOM으로 서버가 터지는 현상을 차단한다.
-        del image_tensor
+        del crop_batch
         self.cam.clear_buffers()
         self.model.zero_grad(set_to_none=True)
         if is_cuda:
             torch.cuda.empty_cache()
 
         return (prediction, result_status, defect_probability,
-                grayscale_cam, cam_peak_xy, inference_time_ms)
+                grayscale_cam, cam_peak_xy, crop_offset_xy, inference_time_ms)
