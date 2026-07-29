@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 노후 건물 진단 시스템</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="system-container">
+        <!-- 상단 헤더 -->
+        <header class="system-header">
+            <h1>AI 노후 건물 진단 시스템</h1>
+            <div class="system-status" id="systemStatus">[SYSTEM READY: AWAITING INPUT]</div>
+        </header>
+
+        <!-- 메인 워크스페이스 -->
+        <main class="workspace">
+            <!-- 좌측 컨트롤 패널 -->
+            <section class="control-panel">
+                <!-- 파일 업로드 영역 -->
+                <div class="upload-zone" id="uploadZone">
+                    <input type="file" id="fileInput" accept="image/*" hidden>
+                    <div class="upload-box" id="uploadBox">
+                        <div class="upload-icon">📁</div>
+                        <p id="uploadText">사진을 여기로 드래그하거나<br>클릭하여 업로드하세요</p>
+                    </div>
+                </div>
+
+                <!-- 3번: 로딩 및 실시간 데이터 분석 중 상태 화면 -->
+                <div class="log-zone hide" id="logZone">
+                    <div class="code-log">
+                        <p>> [INFO]Initializing Neural Network...</p>
+                        <p>> [INFO]Loading Pre-trained Weights... Success</p>
+                        <p>> [DATA]Analyzing surface color discontinuities...</p>
+                        <p class="blink">> [SCANNING] Detecting potential structural risks...</p>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="progressBar"></div>
+                        <span class="progress-text" id="progressText">[ANALYZING... 0%]</span>
+                    </div>
+                </div>
+
+                <!-- 하단 제어 버튼 (진단 시작 / 다시 진단하기 공용) -->
+                <button class="btn-diagnose" id="btnDiagnose" disabled>진단 시작</button>
+            </section>
+
+            <!-- 우측 이미지 및 분석 뷰어 -->
+            <section class="viewer-panel">
+                <div class="image-viewport" id="imageViewport">
+                    <!-- 기본 격자 배경 (초기 상태) -->
+                    <div class="grid-background" id="gridBg"></div>
+                    
+                    <!-- 업로드된 건물 이미지 -->
+                    <img id="previewImg" src="" alt="건물 이미지" class="hide">
+                    
+                    <!-- 3번 로딩 중 활성화되는 스캔 레이저 라인 -->
+                    <div class="laser-line hide" id="laserLine"></div>
+
+                    <!-- 4번 결과 상태: 크랙 바운딩 박스 오버레이 -->
+                    <div class="result-overlay hide" id="resultOverlay">
+                        <div class="bounding-box">
+                            <span class="box-label">[ERR_CRACK_01 / CONFIDENCE: 94.2%]</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 4번 결과 상태: 하단 결과 패널 -->
+        <footer class="result-panel hide" id="resultPanel">
+            <div class="result-summary">
+                <div class="chart-container">
+                    <span class="label-good">우수 20%</span>
+                    <div class="bar-chart">
+                        <div class="bar-bad-fill"></div>
+                    </div>
+                    <span class="label-bad">80% 불량</span>
+                </div>
+                <h2 class="result-title">⚠️ 판정 결과: 본 건축물은 [불량] 상태로 분석되었습니다.</h2>
+                <p class="result-desc">
+                    해당 영역<span class="highlight-red">(Red Box_01)</span>에서 표면 음영의 급격한 불연속성이 감지되었습니다.<br>
+                    이는 전형적인 외벽 크랙 패턴으로 식별됩니다.
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
