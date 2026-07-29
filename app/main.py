@@ -6,6 +6,8 @@ from flask import Flask, render_template, request
 import torch
 import cv2
 import numpy as np
+from bson import ObjectId  # 🍃 MongoDB ObjectId 생성을 위해 임포트
+from pymongo import MongoClient
 
 # 💡 두 개의 로컬 모듈을 임포트합니다.
 from ai_engine import ApartmentClassifier
@@ -18,10 +20,22 @@ project_dir = Path(__file__).resolve().parent
 
 # EfficientNet-B0 이름으로 교체된 가중치 파일 경로
 model_path = project_dir.parent / "model" / "best_efficientnet_b0_finetuned_epoch20.pth"
+
+# 🔒 [클라우드/로컬 공용] CUDA 환경 유무를 자동 체크하여 디바이스 할당
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # 서버가 켜질 때 EfficientNet 기반 객체를 메모리에 단 한 번 올립니다.
 classifier = ApartmentClassifier(model_path, device)
+
+# =========================================================================
+# 🍃 [MongoDB 설정] 로컬 및 클라우드 호환용 컨텍스트 선언
+# =========================================================================
+# 클라우드 배포 시 환경 변수(Environment Variable) 환경에 맞추어 주소를 유연하게 전환 가능합니다.
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+mongo_client = MongoClient(MONGO_URI)
+db = mongo_client["apartment_inspection_db"]  
+collection = db["inspection_logs"]             
+# =========================================================================
 
 @app.route('/')
 def home():
@@ -77,7 +91,6 @@ def predict():
         h, w, _ = check_img.shape
         
         if w > 1024 or h > 1024:
-            # 해상도 조건을 불만족하면 저장했던 원본 임시 파일을 서버 디스크에서 즉시 지우고 차단합니다.
             if os.path.exists(file_path):
                 os.remove(file_path)
             return f'<script>alert("이미지 해상도가 너무 큽니다. 가로 및 세로가 1024픽셀 이하인 사진을 올려주세요. (업로드된 크기: {w}x{h})"); window.location.href = "/";</script>'
@@ -93,14 +106,16 @@ def predict():
     result_file_path = os.path.join(result_dir, result_file_name)
     
     # 방어적 제어 변수 선언
+    prediction = -1
     result_status = "분류 실패 (프로세스 오류)"
+    grayscale_cam = None
     display_image_path = file_path 
 
     try:
-        # ❶ AI 엔진 호출 (ai_engine.py) - EfficientNet-B0 기반 실시간 텐서 전처리 후 추론 진행
-        prediction, result_status, grayscale_cam, inference_time = classifier.predict_and_get_cam(file_path)
+        # ❶ AI 엔진 호출 (ai_engine.py) - 순수 AI 추론 시간은 내부에서 측정되므로 수신값은 언더스코어(_) 처리합니다.
+        prediction, result_status, grayscale_cam, _ = classifier.predict_and_get_cam(file_path)
         
-        # ❷ OpenCV 이미지 프로세서 호출 (cv_processor.py) - 검증된 안전한 파일만 처리함
+        # ❷ OpenCV 이미지 프로세서 호출 (cv_processor.py)
         if prediction in [1, 2] and grayscale_cam is not None:
             draw_defect_bounding_boxes(file_path, result_file_path, grayscale_cam)
             display_image_path = result_file_path
@@ -112,9 +127,33 @@ def predict():
         print(f"❌ 추론/시각화 파이프라인 에러 발생: {e}")
         result_status = "분류 실패 (에러 발생)"
 
-    # 4. 웹 표준 경로 슬래시 정제 및 응답 렌더링
+    # 4. 웹 표준 경로 슬래시 정제
     web_origin_path = f"/{file_path.replace('\\', '/')}"
     web_result_path = f"/{display_image_path.replace('\\', '/')}"
+
+    # =========================================================================
+    # 🍃 [MongoDB 데이터 저장] 최종 정의한 BSON 구조 매핑 (밀리초 필드 완벽 제외)
+    # =========================================================================
+    if "실패" in result_status:
+        db_status = "오류"
+    else:
+        db_status = "우수" if prediction == 0 else "불량"
+
+    log_document = {
+        "_id": ObjectId(),                               # 다큐먼트 고유 ID
+        "origin_id": ObjectId(),                         # 원본 참조용 고유 ID
+        "result_file_name": result_file_name,            # 결과 파일명
+        "save_path": display_image_path,                 # 서버 내부 물리 저장 경로 (역슬래시 유지)
+        "status": db_status,                             # "우수" 또는 "불량"
+        "create_at": datetime.utcnow()                   # ISO UTC 타임스탬프 형식 (2026-07-27T15:...)
+    }
+    
+    try:
+        collection.insert_one(log_document)
+    except Exception as mongo_err:
+        # DB 트랜잭션 장애가 유저의 웹 결과 화면 출력을 방해하지 않도록 격리 조치
+        print(f"❌ MongoDB 저장 오류: {mongo_err}")
+    # =========================================================================
 
     return render_template(
         'result.html', 
@@ -124,5 +163,5 @@ def predict():
     )
 
 if __name__ == '__main__':
-    # 로컬 테스트용이므로 기존 포트와 디버그 모드를 유지합니다.
+    # 클라우드 컨테이너 포트 바인딩 및 외부 접속 유연화를 위해 기본 호스트 오픈 적용
     app.run(host='0.0.0.0', port=5000, debug=True)

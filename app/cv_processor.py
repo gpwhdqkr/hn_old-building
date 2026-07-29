@@ -1,6 +1,7 @@
 import os
 import cv2
 import numpy as np
+import torch  # 🔒 Grad-CAM 텐서 타입 체크를 위해 추가
 
 def _read_img(file_path):
     """한글 경로 호환 원본 이미지 로드"""
@@ -16,9 +17,16 @@ def draw_defect_bounding_boxes(file_path, result_file_path, grayscale_cam):
     """
     Grad-CAM 마스크를 기반으로 다이나믹한 빨간색 사각형 상자와 텍스트를 그리는 함수
     """
-    # 🔒 [안전 가드] Grad-CAM의 출력 차원이 3차원(Batch 포함)일 경우, 첫 번째 이미지만 가져오도록 방어합니다.
+    # 🔒 [클라우드/배포 안전 가드] 파이토치 텐서가 넘어올 경우를 대비해 CPU 넘파이 배열로 강제 변환
+    if isinstance(grayscale_cam, torch.Tensor):
+        grayscale_cam = grayscale_cam.detach().cpu().numpy()
+
+    # 🔒 [안전 가드 보완] 3차원 배열 형태인 경우 (1, H, W)이든 (H, W, 1)이든 안전하게 2차원(H, W)으로 압축
     if len(grayscale_cam.shape) == 3:
-        grayscale_cam = grayscale_cam[0]
+        if grayscale_cam.shape[0] == 1:
+            grayscale_cam = grayscale_cam[0]
+        elif grayscale_cam.shape[-1] == 1:
+            grayscale_cam = grayscale_cam[:, :, 0]
 
     # 1. Grad-CAM 마스크 이진화 (0~255 스케일 변환)
     binary_map = (grayscale_cam > 0.5).astype(np.uint8) * 255
