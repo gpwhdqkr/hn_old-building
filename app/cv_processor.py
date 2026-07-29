@@ -9,8 +9,17 @@ from ai_engine import EVAL_RESIZE_SHORT, INPUT_SIZE
 # 박스가 너무 많이/자잘하게 잡히면 0.6~0.7로 올려서 조정.
 BOX_THRESHOLD = 0.5
 
+# [약한 히트맵 방어 1단계] 확신도가 낮은 불량은 히트맵 반응이 약해 절대 임계값
+# (BOX_THRESHOLD)을 넘는 영역이 없을 수 있다. 이때는 "히트맵 최대값 × 이 비율"
+# 지점으로 임계값을 자동 완화한다 (강한 히트맵은 기존 동작 그대로 유지).
+RELATIVE_THRESHOLD_RATIO = 0.7
+
 # 노이즈 박스 제거: 한 변이 이 픽셀 이하인 박스는 무시 (히트맵 좌표계 기준)
 MIN_BOX_SIZE = 15
+
+# [약한 히트맵 방어 2단계] 크기 필터까지 통과한 박스가 0개면 피크 좌표 중심으로
+# 그리는 보장 박스의 반변 길이 = 크롭 영역 한 변 × 이 비율 (불량 = 박스 ≥ 1 계약)
+FALLBACK_BOX_HALF_RATIO = 0.08
 
 
 def _read_img(file_path):
@@ -74,33 +83,49 @@ def draw_defect_bounding_boxes(file_path, result_file_path, grayscale_cam, cam_p
 
     # 1. 히트맵을 원본 대응 영역 크기로 확대 후 이진화 → 컨투어 추출
     cam_resized = cv2.resize(cam, (crop_size, crop_size), interpolation=cv2.INTER_LINEAR)
-    binary_map = (cam_resized > BOX_THRESHOLD).astype(np.uint8) * 255
+
+    # [방어 1단계] 히트맵이 약해 절대 임계값을 넘는 영역이 없으면 박스가 0개가
+    # 되므로, 최대값 대비 상대 임계값과 비교해 낮은 쪽을 쓴다. min()으로 묶여
+    # 있어 강한 히트맵(최대값 ≈ 1)은 기존 BOX_THRESHOLD 동작과 완전히 동일하다.
+    peak_value = float(cam_resized.max())
+    threshold = min(BOX_THRESHOLD, peak_value * RELATIVE_THRESHOLD_RATIO)
+    binary_map = (cam_resized > threshold).astype(np.uint8) * 255
     contours, _ = cv2.findContours(binary_map, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     # 1024 해상도 제한 스펙에 최적화된 선 두께 및 글자 크기 비율
     base_thickness = max(3, int(w / 250))
     font_scale = max(0.6, w / 900)
 
+    def _draw_box(point1, point2):
+        cv2.rectangle(output_img, point1, point2, (0, 0, 255), base_thickness)
+        # 글자가 이미지 상단 경계를 벗어나지 않도록 Y 좌표 가드 설정
+        text_y = point1[1] - 12 if point1[1] - 12 > 25 else point1[1] + 25
+        cv2.putText(output_img, "Defect Area", (point1[0], text_y),
+                    cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 255),
+                    max(1, int(base_thickness * 0.5)))
+
+    boxes_drawn = 0
     for contour in contours:
         bx, by, box_w, box_h = cv2.boundingRect(contour)
 
         # 작은 노이즈 영역은 제외하고 유효 결함만 박스 마킹
         if box_w > MIN_BOX_SIZE and box_h > MIN_BOX_SIZE:
             # 크롭 영역 좌표 → 원본 좌표로 오프셋 이동 후 빨간 박스 드로잉
-            point1 = (x0 + bx, y0 + by)
-            point2 = (x0 + bx + box_w, y0 + by + box_h)
-            cv2.rectangle(output_img, point1, point2, (0, 0, 255), base_thickness)
+            _draw_box((x0 + bx, y0 + by), (x0 + bx + box_w, y0 + by + box_h))
+            boxes_drawn += 1
 
-            # 글자가 이미지 상단 경계를 벗어나지 않도록 Y 좌표 가드 설정
-            text_y = point1[1] - 12 if point1[1] - 12 > 25 else point1[1] + 25
-            cv2.putText(output_img, "Defect Area", (point1[0], text_y),
-                        cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 255),
-                        max(1, int(base_thickness * 0.5)))
-
-    # 2. 피크 좌표: 448 크롭 좌표계 → 원본 좌표계 (데이터 전달용, 드로잉 없음)
+    # 2. 피크 좌표: 448 크롭 좌표계 → 원본 좌표계 (데이터 전달용 + 2단계 가드)
     scale = crop_size / float(INPUT_SIZE)
     peak_x = max(0, min(x0 + int(round(cam_peak_xy[0] * scale)), w - 1))
     peak_y = max(0, min(y0 + int(round(cam_peak_xy[1] * scale)), h - 1))
+
+    # [방어 2단계] 크기 필터까지 거친 박스가 하나도 없으면 피크 좌표 중심의
+    # 보장 박스 1개를 그린다 → "불량 판정 = 박스 ≥ 1개" 계약을 항상 만족.
+    if boxes_drawn == 0:
+        half = max(MIN_BOX_SIZE * 2, int(crop_size * FALLBACK_BOX_HALF_RATIO))
+        point1 = (max(0, peak_x - half), max(0, peak_y - half))
+        point2 = (min(w - 1, peak_x + half), min(h - 1, peak_y + half))
+        _draw_box(point1, point2)
 
     # 최종 결과물 디스크 저장
     _save_img(result_file_path, output_img)
