@@ -1,0 +1,2 @@
+﻿stage,epoch,train_loss,val_loss,val_macro_f1,val_accuracy,val_f1_우수,lr_head,lr_backbone,epoch_time_sec,is_best
+finetuned,1,0.283136,0.525647,0.563636,0.625000,0.727273,1.00e-04,1.00e-05,26.6,0

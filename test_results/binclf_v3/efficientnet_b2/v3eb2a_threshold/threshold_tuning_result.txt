@@ -1,0 +1,25 @@
+﻿===== 임계값 튜닝 =====
+모델 파일 : best_efficientnet_b2_binclf_v3_finetuned_v3eb2a.pth
+불량 recall 하한 (RECALL_FLOOR) : 0.85
+사용 장치 : cuda
+
+선택된 threshold : 0.26
+  (validation 기준 macro F1 0.9039, 우수 F1 0.8223, 불량 recall 0.9862)
+
+===== Test: 기본 0.5 vs 선택 threshold =====
+
+[기본 0.5]
+  우수 F1 : 0.8654 | 우수 recall : 0.8683
+  불량 F1 : 0.9884 | 불량 recall : 0.9881
+  Macro F1 : 0.9269 | Accuracy : 97.87%
+       예측_우수  예측_불량
+실제_우수    389     59
+실제_불량     62   5166
+
+[threshold 0.26]
+  우수 F1 : 0.8759 | 우수 recall : 0.8348
+  불량 F1 : 0.9899 | 불량 recall : 0.9939
+  Macro F1 : 0.9329 | Accuracy : 98.13%
+       예측_우수  예측_불량
+실제_우수    374     74
+실제_불량     32   5196

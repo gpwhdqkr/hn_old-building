@@ -1,0 +1,23 @@
+annotations_bbox_v2 변환/검증 리포트
+입력: D:\hn_old-building\data\processed\annotations_v2.jsonl
+출력: D:\hn_old-building\data\processed\annotations_bbox_v2.csv
+
+annotation 총 77432개 -> bbox 행 77432개
+  타입별: {'polygon': 45790, 'bbox': 31642}
+  polygon형 min/max 재계산 vs 기존 bbox 필드 불일치: 0
+  좌표 없는 행(제외됨): 0
+
+bbox 전수 검증 (원본 픽셀 좌표계):
+  코너 순서 오류(x0>x1 or y0>y1): 0
+  퇴화 박스(폭 또는 높이 0): 2
+  음수 좌표: 0
+  실측 해상도 초과(image_spec_v2 기준): 0
+  image_spec_v2 미등재 이미지의 annotation: 0
+
+좌표는 원본 픽셀 좌표계 그대로임. 캐시(processed_images_v2) 좌표가
+필요하면 image_spec_v2.csv의 scale을 곱해서 사용할 것.
+퇴화 박스 2건 상세 (둘 다 원본 Type=bbox — min/max 변환 문제 아님, 원본 라벨 노이즈):
+  S-210904_A_F_2_R_2961004-3 ann0 class2: [0,0,0,1] (폭 0)
+  S-211106_A_L_1_R_9636077-21 ann0 class1: [0,0,16,0] (높이 0)
+  CSV에는 원본 충실 원칙으로 유지함 — defect-aware crop 등 소비 코드는
+  폭/높이 0 박스를 무시하거나 클램프할 것.

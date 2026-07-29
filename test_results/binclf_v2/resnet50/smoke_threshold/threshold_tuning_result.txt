@@ -1,0 +1,25 @@
+﻿===== 임계값 튜닝 =====
+모델 파일 : best_resnet50_binclf_v2_finetuned_smoke.pth
+불량 recall 하한 (RECALL_FLOOR) : 0.85
+사용 장치 : cpu
+
+선택된 threshold : 0.36
+  (validation 기준 macro F1 0.8277, 우수 F1 0.8197, 불량 recall 0.8750)
+
+===== Test: 기본 0.5 vs 선택 threshold =====
+
+[기본 0.5]
+  우수 F1 : 0.8312 | 우수 recall : 1.0000
+  불량 F1 : 0.7451 | 불량 recall : 0.5938
+  Macro F1 : 0.7881 | Accuracy : 79.69%
+       예측_우수  예측_불량
+실제_우수     32      0
+실제_불량     13     19
+
+[threshold 0.36]
+  우수 F1 : 1.0000 | 우수 recall : 1.0000
+  불량 F1 : 1.0000 | 불량 recall : 1.0000
+  Macro F1 : 1.0000 | Accuracy : 100.00%
+       예측_우수  예측_불량
+실제_우수     32      0
+실제_불량      0     32

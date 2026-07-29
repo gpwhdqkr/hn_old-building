@@ -1,0 +1,14 @@
+﻿===== 음영 강건성 측정 (convnext_tiny v3cta finetuned) =====
+test 5676장, 조건별 이미지 고정 시드, Resize512-CenterCrop448
+
+clean            | 우수 F1 0.9081 | 불량 F1 0.9921 | Macro F1 0.9501 | Acc 0.9854
+shadow_mild      | 우수 F1 0.9020 | 불량 F1 0.9914 | Macro F1 0.9467 | Acc 0.9841
+shadow_strong    | 우수 F1 0.8959 | 불량 F1 0.9908 | Macro F1 0.9433 | Acc 0.9831
+lowlight         | 우수 F1 0.8945 | 불량 F1 0.9904 | Macro F1 0.9425 | Acc 0.9824
+shadow_lowlight  | 우수 F1 0.8736 | 불량 F1 0.9881 | Macro F1 0.9309 | Acc 0.9783
+
+clean 대비 Macro F1 하락:
+  shadow_mild      : -0.0034
+  shadow_strong    : -0.0067
+  lowlight         : -0.0076
+  shadow_lowlight  : -0.0192

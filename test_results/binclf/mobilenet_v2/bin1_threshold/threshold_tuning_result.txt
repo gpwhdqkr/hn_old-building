@@ -1,0 +1,61 @@
+﻿==========================================
+결정 임계값(threshold) 보정 실험 결과 — 이원화(binclf)
+==========================================
+모델 파일 : best_mobilenet_v2_binclf_finetuned_bin1.pth
+모델 종류 : mobilenet_v2 (finetuned)
+실험 이름 : bin1
+라벨 정의 : 0=우수, 1=불량(보통 병합)
+사용 장치 : cuda
+
+[threshold 결정 절차]
+판정 규칙 : softmax(logits)의 불량 확률 >= threshold 이면 불량
+threshold 탐색은 validation에서만 수행 (test 누출 없음)
+탐색 범위 : 0.02 ~ 0.98 (0.01 간격, 97개)
+제약 조건 : 불량 recall >= 0.85
+선택 기준 : 제약을 만족하는 후보 중 macro F1 최대 (동률 시 우수 F1 최대)
+선택된 threshold : 0.3
+validation macro F1 : 0.8933
+validation 우수 F1 : 0.8042
+validation 불량 recall : 0.9830
+
+===== Test 결과 비교 (같은 체크포인트, 결정 규칙만 다름) =====
+기준선 threshold = 0.5 (2클래스 argmax와 동일한 규칙)
+
+지표                  기준 0.5    threshold 보정
+우수 F1               0.6941          0.7179
+불량 recall           0.9577          0.9688
+불량 F1               0.9666          0.9713
+Macro F1            0.8303          0.8446
+Accuracy            0.9397          0.9478
+
+===== 기준(threshold 0.5) 클래스별 상세 =====
+              precision    recall  f1-score   support
+
+          우수     0.6397    0.7585    0.6941       501
+          불량     0.9756    0.9577    0.9666      5057
+
+    accuracy                         0.9397      5558
+   macro avg     0.8077    0.8581    0.8303      5558
+weighted avg     0.9453    0.9397    0.9420      5558
+
+
+===== threshold 보정 클래스별 상세 =====
+              precision    recall  f1-score   support
+
+          우수     0.7002    0.7365    0.7179       501
+          불량     0.9738    0.9688    0.9713      5057
+
+    accuracy                         0.9478      5558
+   macro avg     0.8370    0.8526    0.8446      5558
+weighted avg     0.9491    0.9478    0.9484      5558
+
+
+===== 기준(threshold 0.5) 혼동행렬 =====
+       예측_우수  예측_불량
+실제_우수    380    121
+실제_불량    214   4843
+
+===== threshold 보정 혼동행렬 =====
+       예측_우수  예측_불량
+실제_우수    369    132
+실제_불량    158   4899

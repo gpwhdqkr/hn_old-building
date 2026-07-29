@@ -1,0 +1,25 @@
+﻿===== 임계값 튜닝 =====
+모델 파일 : best_convnext_tiny_binclf_v3_finetuned_v3cta.pth
+불량 recall 하한 (RECALL_FLOOR) : 0.85
+사용 장치 : cuda
+
+선택된 threshold : 0.50
+  (validation 기준 macro F1 0.9053, 우수 F1 0.8247, 불량 recall 0.9884)
+
+===== Test: 기본 0.5 vs 선택 threshold =====
+
+[기본 0.5]
+  우수 F1 : 0.9081 | 우수 recall : 0.9152
+  불량 F1 : 0.9921 | 불량 recall : 0.9914
+  Macro F1 : 0.9501 | Accuracy : 98.54%
+       예측_우수  예측_불량
+실제_우수    410     38
+실제_불량     45   5183
+
+[threshold 0.50]
+  우수 F1 : 0.9081 | 우수 recall : 0.9152
+  불량 F1 : 0.9921 | 불량 recall : 0.9914
+  Macro F1 : 0.9501 | Accuracy : 98.54%
+       예측_우수  예측_불량
+실제_우수    410     38
+실제_불량     45   5183
