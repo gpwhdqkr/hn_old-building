@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 노후 건물 진단 시스템</title>
+    <title>AI 노후 건물 외벽 진단 시스템</title>
     <!-- templates/finally.html 상단 헤더 -->
 <link rel="stylesheet" href="style.css">
 </head>
@@ -11,7 +11,7 @@
     <div class="system-container">
         <!-- 상단 헤더 -->
         <header class="system-header">
-            <h1>AI 노후 건물 진단 시스템</h1>
+            <h1>AI 노후 건물 외벽 진단 시스템</h1>
             <div class="system-status" id="systemStatus">[SYSTEM READY: AWAITING INPUT]</div>
         </header>
 
@@ -24,23 +24,47 @@
                     <input type="file" id="fileInput" name="house_image" accept="image/*" hidden>
                     <div class="upload-box" id="uploadBox">
                         <div class="upload-icon">📁</div>
-                        <p id="uploadText">사진을 여기로 드래그하거나<br>클릭하여 업로드하세요</p>
+                        <p id="uploadText">사진을 여기로 드래그하거나<br>클릭하여 업로드하세요
+                        <br><br>(50Mb이하, .png .jpg .jpeg 만 가능. 
+                        <br>해상도 가로, 세로 1024 이하.
+                        <br>진단하고 싶은 하자가 정중앙에 위치한 사진 권장.)</p>
+                    </div>
+                    <div style="padding-left : 30px; padding-top : 15px;">
+                        <h4>모델 사용법</h4>
+                        <li>1. 상단의 조건에 해당하는 이미지 파일을 첨부하시오.</li>
+                        <li>2. 우측 화면을 통해 검사 대상 이미지를 확인하시오.</li>
+                        <li>3. 맞다면, 아래 초록색의 '진단 시작' 버튼을 누르시오.</li>
+                        <li>4. 로딩 후 아래에 나온 결과를 참조하시오.</li>
                     </div>
                 </div>
 
                 <!-- 3번 상태: 실시간 모델 추론 흐름 기동 터미널 -->
                 <div class="log-zone hide" id="logZone">
+                    <br>
+                    <br>
+                    <br>
                     <div class="code-log">
                         <p>> [INFO] Initializing ConvNeXt-Tiny Engine...</p>
                         <p>> [INFO] Connecting to CUDA core...</p>
                         <p>> [DATA] Transferring payload to model tensor...</p>
-                        <p class="blink">> [COMPUTING] LayerCAM tracking in progress...</p>
+                        <p>> [COMPUTING] LayerCAM tracking in progress...</p>
                     </div>
+
+
+                    <div style="padding-left : 30px; padding-top : 15px;">
+                        <h4>모델 사용법</h4>
+                        <li>1. 상단의 조건에 해당하는 이미지 파일을 첨부하시오.</li>
+                        <li>2. 우측 화면을 통해 검사 대상 이미지를 확인하시오.</li>
+                        <li>3. 맞다면, 아래 초록색의 '진단 시작' 버튼을 누르시오.</li>
+                        <li>4. 로딩 후 아래에 나온 결과를 참조하시오.</li>
+                    </div>
+                    
                     <div class="progress-container">
                         <div class="progress-bar" id="progressBar"></div>
                         <span class="progress-text" id="progressText">[ANALYZING... 0%]</span>
                     </div>
                 </div>
+
 
                 <!-- 통합 기동 스위치 -->
                 <button class="btn-diagnose" id="btnDiagnose" disabled>진단 시작</button>
@@ -63,6 +87,12 @@
 
         <!-- 4번 상태: 백엔드 main.py의 result.html 텍스트 스트림이 투하될 동적 영역 -->
         <div id="dynamicResult" class="hide"></div>
+
+        <br>
+        <div style="display : flex; justify-content : center;">
+            <h4> **해당 모델은 AI-Hub에 있는 '서울시 노후 주택 균열 데이터'를 이용해 학습시켰습니다.**  </h4>
+        </div>
+
     </div>
 
     <!-- templates/finally.html 맨 하단 스크립트 -->

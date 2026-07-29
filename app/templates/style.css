@@ -40,8 +40,8 @@ body { background-color: #0b0f19; color: #a5b4fc; display: flex; justify-content
 .btn-diagnose.active { background: #059669; border-color: #10b981; color: #ffffff; cursor: pointer; box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
 /* 우측 모니터 프레임 레이아웃 및 기준점 설정 */
 .viewer-panel { background: #090d16; border: 1px solid #1e293b; border-radius: 6px; padding: 10px; position: relative; }
-/* [수정] 원본 이미지 높이에 영향받지 않게 높이를 400px로 꽉 고정 */
-.image-viewport { width: 100%; height: 400px; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; background: #050810; border: 1px solid #1e293b; }
+/* [수정] 원본 이미지 높이에 영향받지 않게 높이를 510px로 꽉 고정 */
+.image-viewport { width: 100%; height: 510px; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; background: #050810; border: 1px solid #1e293b; }
 /* 백그라운드 그리드 사각형 격자 무늬 배경 묘사 */
 .grid-background { position: absolute; width: 100%; height: 100%; background-size: 20px 20px; background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px); }
 /* [수정] 어떤 이미지가 들어와도 가로세로 비율을 유지하며 400px 내부에 꽉 맞춤 */

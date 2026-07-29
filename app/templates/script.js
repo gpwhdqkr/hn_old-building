@@ -29,49 +29,82 @@ document.addEventListener('DOMContentLoaded', () => {
 
     uploadBox.addEventListener('drop', (e) => {
         if (e.dataTransfer.files.length > 0) {
-            selectedFileBlob = e.dataTransfer.files[0]; // 단일 바이너리 객체 추출 고정
-            handlePreview(selectedFileBlob);
+            handleFileValidation(e.dataTransfer.files[0]); // 첫 번째 파일만 안전하게 전달
         }
     });
 
     uploadBox.addEventListener('click', () => fileInput.click());
     
-    const onFileSelect = (e) => {
+    // 🔒 [중복 바인딩 버그 교정] input과 change의 이중 호출을 막기 위해 가장 확실한 change 하나로 통합 가동
+    fileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
-            selectedFileBlob = e.target.files[0];
-            handlePreview(selectedFileBlob);
+            handleFileValidation(e.target.files[0]);
         }
-    };
-    fileInput.addEventListener('input', onFileSelect);
-    fileInput.addEventListener('change', onFileSelect);
+    });
 
-    function handlePreview(file) {
+    function handleFileValidation(file) {
         if (!file.type.startsWith('image/')) {
             alert('이미지 파일만 업로드 가능합니다!');
+            resetSystem();
             return;
         }
+
+        const fileName = file.name.toLowerCase();
+        const hasAllowedExtension = fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png');
+
+        if (!hasAllowedExtension) {
+            alert('허용되지 않은 파일 형식입니다. JPG, JPEG, PNG 이미지만 업로드해 주세요.');
+            resetSystem();
+            return;
+        }
+
         const reader = new FileReader();
-        reader.onload = (event) => {
-            requestAnimationFrame(() => {
-                previewImg.src = event.target.result;
-                previewImg.classList.remove('hide');
-                resultImg.classList.add('hide');
-                gridBg.classList.add('hide');
-                systemStatus.textContent = '[READY TO SCAN]';
-                systemStatus.style.color = '#10b981';
-                uploadText.innerHTML = `<strong>${file.name}</strong><br>스캔 준비 완료`;
-                btnDiagnose.removeAttribute('disabled');
-                btnDiagnose.classList.add('active');
-                btnDiagnose.textContent = '진단 시작';
-                isFinished = false;
-            });
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const w = img.width;
+                const h = img.height;
+
+                if (w > 1024 || h > 1024) {
+                    alert(`이미지 해상도가 너무 큽니다. 가로 및 세로가 1024픽셀 이하인 사진을 올려주세요. (업로드된 크기: ${w}x${h})`);
+                    resetSystem();
+                    return;
+                }
+
+                selectedFileBlob = file;
+                renderPreview(e.target.result, file.name);
+            };
+            img.src = e.target.result;
         };
         reader.readAsDataURL(file);
     }
 
+    function renderPreview(imageSrc, fileName) {
+        requestAnimationFrame(() => {
+            previewImg.src = imageSrc;
+            previewImg.classList.remove('hide');
+            resultImg.classList.add('hide');
+            gridBg.classList.add('hide');
+            systemStatus.textContent = '[READY TO SCAN]';
+            systemStatus.style.color = '#10b981';
+            uploadText.innerHTML = `<strong>${fileName}</strong><br>스캔 준비 완료`;
+            btnDiagnose.removeAttribute('disabled');
+            btnDiagnose.classList.add('active');
+            btnDiagnose.textContent = '진단 시작';
+            isFinished = false;
+            
+            logZone.querySelector('.code-log').innerHTML = `
+                <p>> [INFO] Initializing ConvNeXt-Tiny Engine...</p>
+                <p>> [INFO] Loading weights into CUDA/CPU context...</p>
+                <p>> [DATA] Transferring payload to model tensor...</p>
+                <p class="blink">> [COMPUTING] ConvNeXt-Tiny inference running...</p>
+            `;
+        });
+    }
+
     btnDiagnose.addEventListener('click', () => {
         if (isFinished) { resetSystem(); return; }
-        if (!selectedFileBlob) return;
+        if (!selectedFileBlob) { resetSystem(); return; }
 
         btnDiagnose.setAttribute('disabled', 'true');
         btnDiagnose.classList.remove('active');
@@ -90,9 +123,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const scanInterval = setInterval(() => {
             progress += 4;
-            if (progress > 96 && !isResponseReady) progress = 96; 
+            if (progress > 96 && !isResponseReady) progress = 96;
+
             progressBar.style.width = `${progress}%`;
-            progressText.textContent = `[ANALYZING... ${progress}%]`;
+            progressText.textContent = `[ANALYZING... ${progress-4}%]`;
 
             if (progress >= 100 && isResponseReady) {
                 clearInterval(scanInterval);
@@ -101,11 +135,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 50);
 
         fetch('/predict', { method: 'POST', body: payload })
-        .then(res => res.text()) 
+        .then(res => res.text())
         .then(htmlResult => {
-            if (htmlResult.includes('alert("')) {
-                const parts = htmlResult.split('alert("');
-                const errorMsg = parts[1].split('")')[0];
+            if (htmlResult.includes('alert(')) {
+                const match = htmlResult.match(/alert\("([^"]+)"\)/);
+                const errorMsg = match ? match[1] : "서버 방어가드 조건에 위배되었습니다.";
                 throw new Error(errorMsg);
             }
             responseHtmlText = htmlResult;
@@ -125,15 +159,28 @@ document.addEventListener('DOMContentLoaded', () => {
         dynamicResult.innerHTML = htmlContent;
         dynamicResult.classList.remove('hide');
 
+        logZone.querySelector('.code-log').innerHTML = `
+            <p>> [INFO] Initializing ConvNeXt-Tiny Engine...</p>
+            <p>> [INFO] Loading weights into CUDA/CPU context...</p>
+            <p>> [DATA] Transferring payload to model tensor...</p>
+            <p>> [COMPUTING] LayerCAM tracking in progress...</p>
+            <p style="color: #10b981;">> [COMPLETE] Architecture diagnostic logic executed.</p>
+        `;
+
         const metaPipe = document.getElementById('backendUrls');
+        if (!metaPipe) {
+            alert("서버 결과 템플릿 파싱에 실패했습니다.");
+            resetSystem();
+            return;
+        }
+
         const finalResultImgUrl = metaPipe.getAttribute('data-result');
         const finalStatus = metaPipe.getAttribute('data-status');
 
-        // 🛠️ [경로 연동 무결성 처리] main.py가 슬래시를 이미 포함해서 반환하므로 중복 슬래시 방지 적용
         resultImg.src = finalResultImgUrl;
         resultImg.classList.remove('hide');
 
-        if (finalStatus.includes("불량")) {
+        if (finalStatus && finalStatus.includes("불량")) {
             systemStatus.textContent = '[DIAGNOSIS COMPLETE: DEFECT DETECTED]';
             systemStatus.style.color = '#ef4444';
         } else {
@@ -167,6 +214,6 @@ document.addEventListener('DOMContentLoaded', () => {
         btnDiagnose.textContent = '진단 시작';
         systemStatus.textContent = '[SYSTEM READY: AWAITING INPUT]';
         systemStatus.style.color = '#00f2fe';
-        uploadText.innerHTML = '사진을 여기로 드래그하거나<br>클릭하여 업로드하세요';
+        uploadText.innerHTML = `사진을 여기로 드래그하거나<br>클릭하여 업로드하세요<br>(50MB 이하, .png .jpg .jpeg 만 가능)<br>진단하고 싶은 하자가 정중앙에 위치한 사진 권장.`;
     }
 });
