@@ -11,7 +11,7 @@ from pymongo import MongoClient
 
 # 💡 두 개의 로컬 모듈을 임포트합니다.
 from ai_engine import ApartmentClassifier
-from cv_processor import draw_defect_heatmap_overlay, draw_excellent_text_stamp
+from cv_processor import draw_defect_bounding_boxes, draw_excellent_text_stamp
 
 app = Flask(__name__)
 
@@ -121,8 +121,9 @@ def predict():
 
         # ❷ OpenCV 이미지 프로세서 호출 (cv_processor.py)
         if prediction == 1 and grayscale_cam is not None:
-            # 불량: 히트맵 오버레이 + 피크 마커. 반환값은 원본 좌표계 피크 (x, y)
-            peak_x, peak_y = draw_defect_heatmap_overlay(
+            # 불량: 결함 근사 박스 드로잉 (최종 확정 사양 — 히트맵/마커 미표시).
+            # 반환값은 원본 좌표계 피크 (x, y) — 데이터로만 프론트에 전달
+            peak_x, peak_y = draw_defect_bounding_boxes(
                 file_path, result_file_path, grayscale_cam, cam_peak_xy
             )
             display_image_path = result_file_path
@@ -179,7 +180,7 @@ def predict():
         'result.html',
         # -- 기존 변수 (하위 호환 유지) --
         user_image_url=web_origin_path,      # 원본 이미지 URL
-        cam_image_url=web_result_path,       # ① 판정 근거 시각화 이미지 URL (히트맵/스탬프)
+        cam_image_url=web_result_path,       # ① 판정 근거 시각화 이미지 URL (결함 박스/스탬프)
         ai_result=result_status,             # ② 판정 결과: "우수" / "불량" / "분류 실패 (...)"
         # -- v3 신규 변수 --
         probability_percent=probability_percent,  # ③ 판정 클래스의 확률 % (0~100, 소수 1자리)
