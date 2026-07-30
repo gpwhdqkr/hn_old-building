@@ -50,10 +50,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const fileName = file.name.toLowerCase();
-        const hasAllowedExtension = fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png');
+        // 끝자리가 .jpg, .jpeg, .png, .jfif 중 하나인지 완벽히 체크
+        const hasAllowedExtension = ['.jpg', '.jpeg', '.png', '.jfif'].some(ext => fileName.endsWith(ext));
 
         if (!hasAllowedExtension) {
-            alert('허용되지 않은 파일 형식입니다. JPG, JPEG, PNG 이미지만 업로드해 주세요.');
+            alert('허용되지 않은 파일 형식입니다. JPG, JPEG, PNG, JFIF 이미지만 업로드해 주세요.');
             resetSystem();
             return;
         }
@@ -214,6 +215,6 @@ document.addEventListener('DOMContentLoaded', () => {
         btnDiagnose.textContent = '진단 시작';
         systemStatus.textContent = '[SYSTEM READY: AWAITING INPUT]';
         systemStatus.style.color = '#00f2fe';
-        uploadText.innerHTML = `사진을 여기로 드래그하거나<br>클릭하여 업로드하세요<br>(50MB 이하, .png .jpg .jpeg 만 가능)<br>진단하고 싶은 하자가 정중앙에 위치한 사진 권장.`;
+        uploadText.innerHTML = `사진을 여기로 드래그하거나<br>클릭하여 업로드하세요<br><br>(50MB 이하, .png .jpg .jpeg .jfif 만 가능)<br>해상도 가로, 세로 1024 이하.<br>진단하고 싶은 하자가 정중앙에 위치한 사진 권장.`;
     }
 });

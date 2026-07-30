@@ -76,11 +76,14 @@ def predict():
     # =========================================================================
     # 🔒 [방어 가드 2단계] 이미지 확장자 필터링
     # =========================================================================
-    allowed_extensions = {'.png', '.jpg', '.jpeg'}
+    allowed_extensions = {'.png', '.jpg', '.jpeg', '.jfif'}
     file_extension = os.path.splitext(uploaded_file.filename)[1].lower()
 
     if file_extension not in allowed_extensions:
-        return '<script>alert("허용되지 않은 파일 형식입니다. JPG, JPEG, PNG 이미지만 업로드해 주세요."); window.location.href = "/";</script>'
+        return '<script>alert("허용되지 않은 파일 형식입니다. JPG, JPEG, PNG, JFIF 이미지만 업로드해 주세요."); window.location.href = "/";</script>'
+
+    # 💡 [핵심 교정] .jfif 환경 등에서의 OpenCV 호환성 및 경로 깨짐 방지를 위해 내부 저장 확장자를 .jpg로 통일
+    save_extension = '.jpg' if file_extension == '.jfif' else file_extension
 
     # 폴더 구조 빌드
     origin_dir = os.path.join('static', 'images', 'origin')
@@ -88,7 +91,8 @@ def predict():
     os.makedirs(origin_dir, exist_ok=True)
     os.makedirs(result_dir, exist_ok=True)
 
-    unique_filename = f"{uuid.uuid4().hex}{file_extension}"
+    # file_extension 대신 안전한 save_extension 기반으로 고유 파일명 생성
+    unique_filename = f"{uuid.uuid4().hex}{save_extension}"
     file_path = os.path.join(origin_dir, unique_filename)
     uploaded_file.save(file_path)
 
@@ -179,7 +183,7 @@ def predict():
             round(defect_probability, 6) if defect_probability is not None else None
         ),
         "inference_time_ms": inference_time_ms,          # 추론 소요 시간 (ms)
-        "create_at": datetime.utcnow()                   # ISO UTC 타임스탬프 형식
+        "create_at": datetime.now()                   # ISO UTC 타임스탬프 형식
     }
 
     try:
@@ -188,6 +192,10 @@ def predict():
         # DB 트랜잭션 장애가 유저의 웹 결과 화면 출력을 방해하지 않도록 격리 조치
         print(f"❌ MongoDB 저장 오류: {mongo_err}")
     # =========================================================================
+    
+    if "실패" in result_status:
+        return ('<script>alert("진단 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");'
+            ' window.location.href = "/";</script>')
 
     # 프론트 연동 5종 출력 — 변수 설명은 app/FRONTEND_GUIDE.md 참고
     return render_template(

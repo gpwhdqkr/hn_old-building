@@ -1,3 +1,4 @@
+import os          # ← 추가
 import cv2
 import numpy as np
 import torch  # 🔒 LayerCAM 텐서 타입 체크를 위해 유지
@@ -29,8 +30,26 @@ def _read_img(file_path):
 
 
 def _save_img(file_path, img):
-    """한글 경로 호환 이미지 저장"""
-    _, encoded_img = cv2.imencode('.png', img)
+    """한글 경로 호환 이미지 저장.
+
+    인코딩 포맷을 목표 파일명의 확장자에 맞춘다. 항상 '.png'로 인코딩하면
+    result_xxx.jpg 안에 PNG 바이트가 들어가, 서버가 Content-Type을
+    image/jpeg로 잘못 선언하고 용량도 2배 이상 부풀린다.
+    """
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext in ('.jpg', '.jpeg'):
+        # 박스 선/글자 경계가 뭉개지지 않도록 품질을 높게 유지
+        params = [cv2.IMWRITE_JPEG_QUALITY, 95]
+    elif ext == '.png':
+        params = []
+    else:
+        # 알 수 없는 확장자는 무손실 PNG로 폴백 (확장자도 맞춰줌)
+        ext, params = '.png', []
+        file_path = os.path.splitext(file_path)[0] + '.png'
+
+    success, encoded_img = cv2.imencode(ext, img, params)
+    if not success:
+        raise ValueError(f"결과 이미지 인코딩 실패 (확장자: {ext})")
     encoded_img.tofile(file_path)
 
 

@@ -2,15 +2,18 @@
 <footer class="result-panel">
     <div class="result-summary" style="padding-left : 10vw;">
         <div class="status-meta">
-            <h3 class="meta-tag inference-speed">⚡ 추론 속도: {{ inference_ms }}ms</h3>
+            <h3 class="meta-tag inference-speed">추론 속도: {{ inference_ms }}ms</h3>
             <br>
             
             {% if peak_x and peak_y %}
-            <h3 class="meta-tag defect-coord">🎯 검출 정점: X({{ peak_x }}px), Y({{ peak_y }}px)</h3>
+            <h3 class="meta-tag defect-coord">검출 정점: X({{ peak_x }}), Y({{ peak_y }})</h3>
             {% endif %}
             <br>
             
         </div>
+
+        <h3>AI 판정</h3>
+        <br>
 
        
         <div class="chart-container" style="width: 80%;">
@@ -31,26 +34,17 @@
 
         {% if "우수" in ai_result %}
         <h2 class="result-title text-green">✅ 판정 결과: 本 건축물은 [우수] 상태로 분석되었습니다.</h2>
-        <p class="result-desc">
-            ConvNeXt-Tiny 이원화 분석 모델 가동 결과, 외벽 구조 표면의 안정성이 검증되었습니다.<br>
-            시스템 검증 신뢰도 <strong>{{ probability_percent }}%</strong>로 정중앙에 녹색 안전 등급 스탬프를 마킹합니다. 
-        </p>
+        
         {% else %}
-        <h2 class="result-title text-red">⚠️ 판정 결과: 사진 속 건축물은 [불량] 상태로 분석되었습니다.</h2>
-        <p class="result-desc">
-            해당 영역<span class="highlight-red">(Red Bounding Box)</span>에서 하자로 추정되는 패턴이 검출되었습니다.<br>
-            인공지능 네트워크 최종 판단 가중치 예측 신뢰도: <strong>{{ probability_percent }}% </strong>
-            
-        </p>
+                <br>
         <br>
-        <h5> ⚠️주의 : 이미지 속 B - BOX<span class="highlight-red">(Red Bounding Box)</span>는 LayerCAM을 사용해서 표기한 것으로 정확하지 않은 근사치라는 것을 밝힙니다⚠️  </h5>
+        <h2 class="result-title text-red">판정 결과: 사진 속 건축물은 [불량] 상태로 분석되었습니다.</h2>
         {% endif %}
-        
+        <br>
         <br>
         
-        <h3> ** 보다 정확한 결과를 원한다면 하자가 중앙에 위치한 이미지를 올려주세요.**  </h3>
+        <h3> 보다 정확한 결과를 원한다면 하자가 중앙에 위치한 이미지를 올려주세요. AI는 오류가 있을 수 있습니다. </h3>
         <br>
-        <h3> **AI는 오류가 있을 수 있습니다.**  </h3>
     </div>
 </footer>
 
