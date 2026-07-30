@@ -21,6 +21,10 @@ MIN_BOX_SIZE = 15
 # 그리는 보장 박스의 반변 길이 = 크롭 영역 한 변 × 이 비율 (불량 = 박스 ≥ 1 계약)
 FALLBACK_BOX_HALF_RATIO = 0.08
 
+# 히트맵 오버레이 투명도 — 낮추면 원본 질감이, 올리면 반응 분포가 잘 보인다.
+# 0.45는 src/v3/layercam_binclf_v3.py의 검증 오버레이와 같은 값.
+HEATMAP_ALPHA = 0.45
+
 
 def _read_img(file_path):
     """한글 경로 호환 원본 이미지 로드"""
@@ -131,6 +135,42 @@ def draw_defect_bounding_boxes(file_path, result_file_path, grayscale_cam, cam_p
     _save_img(result_file_path, output_img)
 
     return peak_x, peak_y
+
+
+def draw_heatmap_overlay(file_path, result_file_path, grayscale_cam):
+    """LayerCAM 히트맵을 JET 컬러맵으로 원본에 겹쳐 저장한다 (박스·마커 미표시).
+
+    프론트 before/after 슬라이더의 after 레이어 중 "히트맵 탭"용 이미지다.
+    박스와 좌표계·크기가 완전히 동일해야 탭을 바꿔도 이미지가 튀지 않으므로
+    역매핑은 draw_defect_bounding_boxes와 같은 _cam_region_in_origin을 쓴다.
+
+    모델이 실제로 본 중앙 크롭 영역에만 블렌딩하고 그 경계를 흰 실선으로 그려
+    "판정 근거 영역"이 이미지 전체가 아니라는 점을 시각적으로 명시한다.
+    """
+    cam = _normalize_cam(grayscale_cam)
+
+    output_img = _read_img(file_path)
+    h, w, _ = output_img.shape
+    x0, y0, crop_size = _cam_region_in_origin(w, h)
+
+    # 히트맵(448×448)을 원본 대응 영역 크기로 확대 후 JET 컬러맵 적용
+    cam_resized = cv2.resize(cam, (crop_size, crop_size), interpolation=cv2.INTER_LINEAR)
+    heat = cv2.applyColorMap((cam_resized * 255).astype(np.uint8), cv2.COLORMAP_JET)
+
+    region = output_img[y0:y0 + crop_size, x0:x0 + crop_size]
+    output_img[y0:y0 + crop_size, x0:x0 + crop_size] = cv2.addWeighted(
+        region, 1.0 - HEATMAP_ALPHA, heat, HEATMAP_ALPHA, 0
+    )
+
+    # 분석 영역 경계선 + 범례 문구 (1024 이하 해상도 스펙에 맞춘 비율)
+    thickness = max(2, int(w / 400))
+    cv2.rectangle(output_img, (x0, y0), (x0 + crop_size - 1, y0 + crop_size - 1),
+                  (255, 255, 255), thickness)
+    cv2.putText(output_img, "LayerCAM Heatmap", (x0 + 8, max(28, y0 + 32)),
+                cv2.FONT_HERSHEY_SIMPLEX, max(0.6, w / 1100), (255, 255, 255),
+                max(1, thickness))
+
+    _save_img(result_file_path, output_img)
 
 
 def draw_excellent_text_stamp(file_path, result_file_path):

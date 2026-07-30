@@ -48,13 +48,34 @@
 
             <!-- 우측 모니터 스크린 -->
             <section class="viewer-panel">
+                <!-- after 레이어 전환 탭 (진단 완료 후에만 노출) -->
+                <div class="layer-tabs hide" id="layerTabs">
+                    <button type="button" class="layer-tab active" id="tabHeatmap" data-layer="heatmap">히트맵</button>
+                    <button type="button" class="layer-tab" id="tabBox" data-layer="box">결함 박스</button>
+                </div>
+
                 <div class="image-viewport" id="imageViewport">
                     <!-- 초기 가상 디스플레이 그리드 격자 -->
                     <div class="grid-background" id="gridBg"></div>
-                    <!-- 로컬 브라우저가 수신한 원본 프리뷰 -->
+                    <!-- 로컬 브라우저가 수신한 원본 프리뷰 (진단 전) -->
                     <img id="previewImg" src="" alt="건물 이미지" class="hide">
-                    <!-- OpenCV 인코딩 처리가 완료되어 반환된 타겟 이미지 -->
-                    <img id="resultImg" src="" alt="진단 결과 이미지" class="hide">
+
+                    <!-- 진단 완료 후 before/after 비교 슬라이더.
+                         래퍼 크기는 script.js가 원본 비율에 맞춰 계산해 넣는다
+                         (두 레이어가 픽셀 단위로 정확히 겹쳐야 경계가 자연스럽다) -->
+                    <div class="compare-wrap hide" id="compareWrap">
+                        <img id="beforeImg" class="compare-layer" src="" alt="원본 이미지">
+                        <!-- clip-path로 좌측을 잘라 원본이 드러나게 한다 -->
+                        <div class="compare-after" id="compareAfter">
+                            <img id="resultImg" class="compare-layer" src="" alt="진단 결과 이미지">
+                        </div>
+                        <div class="compare-divider" id="compareDivider">
+                            <span class="compare-handle">◀▶</span>
+                        </div>
+                        <span class="compare-tag tag-before">BEFORE · 원본</span>
+                        <span class="compare-tag tag-after" id="afterTag">AFTER · 히트맵</span>
+                    </div>
+
                     <!-- 동적 스캔 라인 스틱 -->
                     <div class="laser-line hide" id="laserLine"></div>
                 </div>

@@ -34,11 +34,15 @@
         <h2 class="result-title text-red">⚠️ 판정 결과: 本 건축물은 [불량] 상태로 분석되었습니다.</h2>
         <p class="result-desc">
             해당 영역<span class="highlight-red">(Red Bounding Box)</span>에서 표면 음영의 급격한 불연속 패턴이 식별되었습니다.<br>
-            인공지능 네트워크 최종 판단 가중치 예측 신뢰도: <strong>{{ probability_percent }}%</strong>
+            인공지능 네트워크 최종 판단 가중치 예측 신뢰도: <strong>{{ probability_percent }}%</strong><br>
+            <small>※ 상단 슬라이더를 좌우로 끌어 원본과 비교하고, [히트맵]/[결함 박스] 탭으로 근거 표시를 전환할 수 있습니다.
+            히트맵·박스는 모두 근사 영역이며 흰 테두리 안쪽이 모델이 실제로 분석한 구역입니다.</small>
         </p>
         {% endif %}
     </div>
 </footer>
 
 <!-- 🔒 [주소 추출 파이프 보정] main.py가 전달한 절대경로 주소를 정 가공 없이 안전하게 홀딩하도록 수정 완료 -->
-<div id="backendUrls" data-origin="{{ user_image_url }}" data-result="{{ cam_image_url }}" data-status="{{ ai_result }}" class="hide"></div>
+<!-- data-heatmap은 불량 판정에서만 채워진다 (우수/에러는 빈 문자열 → 프론트가 히트맵 탭을 숨김) -->
+<div id="backendUrls" data-origin="{{ user_image_url }}" data-result="{{ cam_image_url }}"
+     data-heatmap="{{ heatmap_image_url or '' }}" data-status="{{ ai_result }}" class="hide"></div>
