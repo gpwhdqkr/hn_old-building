@@ -12,7 +12,7 @@ from pymongo import MongoClient
 
 # 💡 두 개의 로컬 모듈을 임포트합니다.
 from ai_engine import ApartmentClassifier
-from cv_processor import draw_defect_bounding_boxes, draw_excellent_text_stamp
+from cv_processor import draw_defect_bounding_boxes, draw_excellent_text_stamp, draw_heatmap_overlay
 
 app = Flask(__name__)
 # main.py 상단 수정
@@ -122,6 +122,9 @@ def predict():
 
     result_file_name = f"result_{unique_filename}"
     result_file_path = os.path.join(result_dir, result_file_name)
+    # 히트맵 탭 전용 결과물 (박스 이미지와 같은 크기·좌표계로 저장된다)
+    heatmap_file_name = f"heatmap_{unique_filename}"
+    heatmap_file_path = os.path.join(result_dir, heatmap_file_name)
 
     # 방어적 제어 변수 선언 (에러 시 프론트로 None이 내려가도록)
     prediction = -1
@@ -131,6 +134,7 @@ def predict():
     peak_x = None
     peak_y = None
     display_image_path = file_path
+    heatmap_display_path = None   # 히트맵이 없는 경우(우수/에러)는 None 유지
 
     try:
         # ❶ AI 엔진 호출 (ai_engine.py) — 이원화 판정 + 불량 확률 + LayerCAM + 추론 ms
@@ -145,6 +149,14 @@ def predict():
                 file_path, result_file_path, grayscale_cam, cam_peak_xy
             )
             display_image_path = result_file_path
+
+            # [추가] 같은 히트맵으로 JET 오버레이 이미지를 한 장 더 굽는다 (프론트 히트맵 탭용).
+            # 🔒 히트맵 생성이 실패해도 박스 결과 화면은 살아 있어야 한다 (탭만 비활성)
+            try:
+                draw_heatmap_overlay(file_path, heatmap_file_path, grayscale_cam)
+                heatmap_display_path = heatmap_file_path
+            except Exception as heatmap_err:
+                print(f"❌ 히트맵 오버레이 생성 실패(박스 결과는 유지): {heatmap_err}")
         elif prediction == 0:
             draw_excellent_text_stamp(file_path, result_file_path)
             display_image_path = result_file_path
@@ -156,6 +168,9 @@ def predict():
     # 웹 표준 경로 슬래시 정제
     web_origin_path = f"/{file_path.replace('\\', '/')}"
     web_result_path = f"/{display_image_path.replace('\\', '/')}"
+    web_heatmap_path = (
+        f"/{heatmap_display_path.replace('\\', '/')}" if heatmap_display_path else None
+    )
 
     # 판정된 클래스의 확률 % (우수면 1-p, 불량이면 p) — 프론트 표시용
     if defect_probability is None:
@@ -178,6 +193,10 @@ def predict():
         "origin_id": ObjectId(),                         # 원본 참조용 고유 ID
         "result_file_name": result_file_name,            # 결과 파일명
         "save_path": display_image_path,                 # 서버 내부 물리 저장 경로 (역슬래시 유지)
+        "heatmap_file_name": (                           # 히트맵 이미지 파일명 (없으면 None)
+            heatmap_file_name if heatmap_display_path else None
+        ),
+        "heatmap_save_path": heatmap_display_path,       # 히트맵 물리 저장 경로 (없으면 None)
         "status": db_status,                             # "우수" / "불량" / "오류"
         "defect_probability": (                          # 불량 확률 원값 (분석/재튜닝용)
             round(defect_probability, 6) if defect_probability is not None else None
@@ -203,6 +222,7 @@ def predict():
         # -- 기존 변수 (하위 호환 유지) --
         user_image_url=web_origin_path,      # 원본 이미지 URL
         cam_image_url=web_result_path,       # ① 판정 근거 시각화 이미지 URL (결함 박스/스탬프)
+        heatmap_image_url=web_heatmap_path,  # [추가] ⑥ LayerCAM 히트맵 오버레이 URL (우수/에러 시 None)
         ai_result=result_status,             # ② 판정 결과: "우수" / "불량" / "분류 실패 (...)"
         # -- v3 신규 변수 --
         probability_percent=probability_percent,  # ③ 판정 클래스의 확률 % (0~100, 소수 1자리)

@@ -13,9 +13,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressBar = document.getElementById('progressBar');
     const progressText = document.getElementById('progressText');
     const dynamicResult = document.getElementById('dynamicResult');
+    const imageViewport = document.getElementById('imageViewport');
+    const compareWrap = document.getElementById('compareWrap');
+    const beforeImg = document.getElementById('beforeImg');
+    const afterTag = document.getElementById('afterTag');
+    const layerTabs = document.getElementById('layerTabs');
+    const tabHeatmap = document.getElementById('tabHeatmap');
+    const tabBox = document.getElementById('tabBox');
 
     let isFinished = false;
     let selectedFileBlob = null;
+
+    // after 레이어로 쓸 이미지 주소 보관 (탭 전환 시 즉시 교체)
+    const layerUrls = { heatmap: '', box: '' };
+    const DEFAULT_SPLIT = 50;   // 분할선 초기 위치 (%)
 
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(name => {
         uploadBox.addEventListener(name, (e) => { e.preventDefault(); e.stopPropagation(); });
@@ -40,6 +51,76 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.files.length > 0) {
             handleFileValidation(e.target.files[0]);
         }
+    });
+
+    // =========================================================================
+    // before/after 비교 슬라이더 제어
+    // =========================================================================
+
+    /** 분할선 위치(%) 적용 — CSS 변수 하나로 clip-path와 divider가 함께 움직인다. */
+    function setSplit(percent) {
+        const clamped = Math.max(0, Math.min(100, percent));
+        compareWrap.style.setProperty('--split', `${clamped}%`);
+    }
+
+    /** 뷰포트(style.css의 .image-viewport 높이) 안에서 원본 비율을 유지하는 비교 상자
+     *  크기를 계산해 넣는다. 두 레이어가 같은 상자를 100%로 채우므로 분할선이
+     *  이미지 밖으로 새지 않는다. */
+    function fitCompareWrap() {
+        if (!beforeImg.naturalWidth || !beforeImg.naturalHeight) return;
+        const boxWidth = imageViewport.clientWidth;
+        const boxHeight = imageViewport.clientHeight;
+        const aspect = beforeImg.naturalWidth / beforeImg.naturalHeight;
+
+        let width = boxWidth;
+        let height = boxWidth / aspect;
+        if (height > boxHeight) {          // 세로 사진: 높이 기준으로 다시 맞춤
+            height = boxHeight;
+            width = boxHeight * aspect;
+        }
+        compareWrap.style.width = `${Math.round(width)}px`;
+        compareWrap.style.height = `${Math.round(height)}px`;
+    }
+
+    /** 포인터 x좌표 → 분할선 % 변환 (마우스·터치·펜 공통) */
+    function moveSplitToPointer(event) {
+        const rect = compareWrap.getBoundingClientRect();
+        if (!rect.width) return;
+        setSplit(((event.clientX - rect.left) / rect.width) * 100);
+    }
+
+    // 드래그 상태는 자체 플래그로 관리한다 — setPointerCapture가 실패하는 환경에서도
+    // 슬라이더가 멈추지 않도록 (캡처는 상자 밖으로 나갔을 때를 위한 보조 수단)
+    let isDragging = false;
+
+    compareWrap.addEventListener('pointerdown', (e) => {
+        isDragging = true;
+        try { compareWrap.setPointerCapture(e.pointerId); } catch (_) { /* 캡처 미지원 무시 */ }
+        moveSplitToPointer(e);
+    });
+    compareWrap.addEventListener('pointermove', (e) => {
+        if (isDragging) moveSplitToPointer(e);
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(name => {
+        compareWrap.addEventListener(name, (e) => {
+            isDragging = false;
+            try { compareWrap.releasePointerCapture(e.pointerId); } catch (_) { /* 이미 해제됨 */ }
+        });
+    });
+    // 브라우저 창 크기가 바뀌면 비교 상자도 다시 맞춘다
+    window.addEventListener('resize', fitCompareWrap);
+
+    /** 히트맵/박스 탭 전환 — after 레이어 이미지만 바꾸고 분할선은 유지한다. */
+    function selectLayer(layer) {
+        if (!layerUrls[layer]) return;               // 없는 레이어(예: 우수의 히트맵)는 무시
+        resultImg.src = layerUrls[layer];
+        tabHeatmap.classList.toggle('active', layer === 'heatmap');
+        tabBox.classList.toggle('active', layer === 'box');
+        afterTag.textContent = layer === 'heatmap' ? 'AFTER · 히트맵' : 'AFTER · 결함 박스';
+    }
+
+    [tabHeatmap, tabBox].forEach(tab => {
+        tab.addEventListener('click', () => selectLayer(tab.dataset.layer));
     });
 
     function handleFileValidation(file) {
@@ -85,6 +166,9 @@ document.addEventListener('DOMContentLoaded', () => {
             previewImg.src = imageSrc;
             previewImg.classList.remove('hide');
             resultImg.classList.add('hide');
+            // [추가] 이전 진단의 before/after 슬라이더와 레이어 탭도 함께 걷어낸다
+            compareWrap.classList.add('hide');
+            layerTabs.classList.add('hide');
             gridBg.classList.add('hide');
             systemStatus.textContent = '[READY TO SCAN]';
             systemStatus.style.color = '#10b981';
@@ -175,11 +259,36 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        const finalOriginImgUrl = metaPipe.getAttribute('data-origin');
         const finalResultImgUrl = metaPipe.getAttribute('data-result');
+        const finalHeatmapImgUrl = metaPipe.getAttribute('data-heatmap');
         const finalStatus = metaPipe.getAttribute('data-status');
 
         resultImg.src = finalResultImgUrl;
         resultImg.classList.remove('hide');
+
+        // [추가] before/after 슬라이더용 레이어 주소 보관 (탭 전환 시 src만 교체)
+        layerUrls.box = finalResultImgUrl;
+        layerUrls.heatmap = finalHeatmapImgUrl || '';
+
+        // 🔒 히트맵이 없는 경우(우수 판정/히트맵 생성 실패)는 탭을 감추고 박스 한 장만 보여준다
+        const hasHeatmap = Boolean(layerUrls.heatmap);
+        tabHeatmap.classList.toggle('hide', !hasHeatmap);
+        tabBox.textContent = finalStatus.includes('불량') ? '결함 박스' : '판정 스탬프';
+        layerTabs.classList.remove('hide');
+
+        // before = 원본, after = 선택 레이어. 원본 크기를 알아야 비교 상자 비율이 잡히므로
+        // 로드 완료(캐시 히트 포함) 시점에 fitCompareWrap을 한 번 호출한다.
+        beforeImg.src = finalOriginImgUrl;
+        selectLayer(hasHeatmap ? 'heatmap' : 'box');
+        setSplit(DEFAULT_SPLIT);
+        compareWrap.classList.remove('hide');
+
+        if (beforeImg.complete && beforeImg.naturalWidth) {
+            fitCompareWrap();
+        } else {
+            beforeImg.addEventListener('load', fitCompareWrap, { once: true });
+        }
 
         if (finalStatus && finalStatus.includes("불량")) {
             systemStatus.textContent = '[DIAGNOSIS COMPLETE: DEFECT DETECTED]';
@@ -203,6 +312,17 @@ document.addEventListener('DOMContentLoaded', () => {
         resultImg.src = '';
         previewImg.classList.add('hide');
         resultImg.classList.add('hide');
+        // [추가] before/after 슬라이더·탭도 초기 상태로 되돌린다
+        beforeImg.src = '';
+        layerUrls.heatmap = '';
+        layerUrls.box = '';
+        setSplit(DEFAULT_SPLIT);
+        compareWrap.classList.add('hide');
+        layerTabs.classList.add('hide');
+        tabHeatmap.classList.remove('hide');
+        tabHeatmap.classList.add('active');
+        tabBox.classList.remove('active');
+        afterTag.textContent = 'AFTER · 히트맵';
         gridBg.classList.remove('hide');
         progressBar.style.width = '0%';
         progressText.textContent = '[ANALYZING... 0%]';
