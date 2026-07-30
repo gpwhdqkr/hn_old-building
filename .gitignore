@@ -19,3 +19,6 @@ __pycache__/
 model/*.pth
 *.pt
 *.h5
+*.png
+*.jpeg
+*.jfif
