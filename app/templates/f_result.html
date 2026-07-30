@@ -3,15 +3,10 @@
     <div class="result-summary" style="padding-left : 10vw;">
         <div class="status-meta">
             <h3 class="meta-tag inference-speed">추론 속도: {{ inference_ms }}ms</h3>
-            <br>
-            
-            {% if peak_x and peak_y %}
-            <h3 class="meta-tag defect-coord">검출 정점: X({{ peak_x }}), Y({{ peak_y }})</h3>
-            {% endif %}
-            <br>
-            
+       
         </div>
 
+        <br>
         <h3>AI 판정</h3>
         <br>
 
