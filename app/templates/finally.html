@@ -84,16 +84,18 @@
                     <!-- 로컬 브라우저가 수신한 원본 프리뷰 -->
                     <img id="previewImg" src="" alt="건물 이미지" class="hide">
 
-                    <!-- [추가] 진단 완료 후 before/after 비교 슬라이더.
-                         기존 resultImg를 그대로 after 레이어로 감싸 쓴다.
+                    <!-- OpenCV 인코딩 처리가 완료되어 반환된 타겟 이미지 -->
+                    <img id="resultImg" src="" alt="진단 결과 이미지" class="hide">
+
+                    <!-- [추가] 불량 판정에서만 쓰는 before/after 비교 슬라이더.
+                         우수 판정은 이 블록을 쓰지 않고 위의 resultImg만 그대로 보여준다.
                          래퍼 크기는 script.js가 원본 비율에 맞춰 계산해 넣는다
                          (두 레이어가 픽셀 단위로 정확히 겹쳐야 경계가 자연스럽다) -->
                     <div class="compare-wrap hide" id="compareWrap">
                         <img id="beforeImg" class="compare-layer" src="" alt="원본 이미지">
                         <!-- clip-path로 좌측을 잘라 원본이 드러나게 한다 -->
                         <div class="compare-after" id="compareAfter">
-                            <!-- OpenCV 인코딩 처리가 완료되어 반환된 타겟 이미지 -->
-                            <img id="resultImg" src="" alt="진단 결과 이미지" class="hide compare-layer">
+                            <img id="afterImg" class="compare-layer" src="" alt="판정 근거 이미지">
                         </div>
                         <div class="compare-divider" id="compareDivider">
                             <span class="compare-handle">◀▶</span>

@@ -48,12 +48,18 @@ Jinja2에서 `{{ 변수명 }}`으로 바로 사용하면 됩니다.
 
 ## before/after 슬라이더 + 레이어 탭 (현재 `finally.html` 구현)
 
-결과 화면은 **원본(before) ↔ 판정 근거(after)** 를 좌우로 겹쳐 놓고 분할선을 끌어
+불량 판정 화면은 **원본(before) ↔ 판정 근거(after)** 를 좌우로 겹쳐 놓고 분할선을 끌어
 비교하는 방식입니다. after 레이어는 탭으로 교체합니다.
 
-- **before** = `user_image_url`, **after** = `heatmap_image_url`(기본) 또는 `cam_image_url`
-- 탭: `히트맵` / `결함 박스` — 불량일 때 둘 다 노출, 기본 선택은 히트맵
-- 우수 판정(`heatmap_image_url`이 없음): 히트맵 탭을 숨기고 남은 탭 이름을 `판정 스탬프`로 바꿉니다
+**슬라이더는 불량 판정 전용입니다.** `heatmap_image_url`이 있을 때만 켜지고, 우수 판정이나
+히트맵 생성 실패는 기존과 똑같이 `cam_image_url` 한 장(`resultImg`)만 그대로 보여줍니다 —
+비교할 근거 레이어가 없기 때문입니다.
+
+- **before** = `user_image_url`, **after** = `heatmap_image_url`(기본) 또는 `cam_image_url`(박스 탭)
+- 탭: `히트맵` / `결함 박스` — 불량일 때만 노출, 기본 선택은 히트맵
+- 우수 판정: 슬라이더·탭 모두 숨김. EXCELLENT 스탬프 이미지 한 장만 표시 (기존 동작 그대로)
+- 슬라이더의 after 이미지는 `resultImg`가 아니라 별도의 `afterImg`입니다. `resultImg`는
+  원래 위치·용도 그대로 남아 있어 우수 경로가 이전과 완전히 동일하게 동작합니다
 - 분할선은 CSS 변수 `--split` 하나로 `clip-path`와 divider가 함께 움직입니다 (`style.css`의 `.compare-*`)
 - 비교 상자 크기는 `script.js`의 `fitCompareWrap()`이 원본 종횡비에 맞춰 계산합니다.
   뷰포트를 그대로 쓰면 세로 사진에서 분할선이 이미지 밖으로 새기 때문입니다

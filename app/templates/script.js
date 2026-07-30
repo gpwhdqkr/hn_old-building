@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const imageViewport = document.getElementById('imageViewport');
     const compareWrap = document.getElementById('compareWrap');
     const beforeImg = document.getElementById('beforeImg');
+    const afterImg = document.getElementById('afterImg');
     const afterTag = document.getElementById('afterTag');
     const layerTabs = document.getElementById('layerTabs');
     const tabHeatmap = document.getElementById('tabHeatmap');
@@ -112,8 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /** 히트맵/박스 탭 전환 — after 레이어 이미지만 바꾸고 분할선은 유지한다. */
     function selectLayer(layer) {
-        if (!layerUrls[layer]) return;               // 없는 레이어(예: 우수의 히트맵)는 무시
-        resultImg.src = layerUrls[layer];
+        if (!layerUrls[layer]) return;               // 주소가 없는 레이어는 무시
+        afterImg.src = layerUrls[layer];
         tabHeatmap.classList.toggle('active', layer === 'heatmap');
         tabBox.classList.toggle('active', layer === 'box');
         afterTag.textContent = layer === 'heatmap' ? 'AFTER · 히트맵' : 'AFTER · 결함 박스';
@@ -267,27 +268,28 @@ document.addEventListener('DOMContentLoaded', () => {
         resultImg.src = finalResultImgUrl;
         resultImg.classList.remove('hide');
 
-        // [추가] before/after 슬라이더용 레이어 주소 보관 (탭 전환 시 src만 교체)
+        // [추가] 불량 판정(= 히트맵이 있을 때)에만 before/after 슬라이더와 탭을 켠다.
+        // 우수 판정이나 히트맵 생성 실패는 위 resultImg 한 장만 그대로 보여주는
+        // 기존 동작을 유지한다 (비교할 근거 레이어가 없으므로).
         layerUrls.box = finalResultImgUrl;
         layerUrls.heatmap = finalHeatmapImgUrl || '';
 
-        // 🔒 히트맵이 없는 경우(우수 판정/히트맵 생성 실패)는 탭을 감추고 박스 한 장만 보여준다
-        const hasHeatmap = Boolean(layerUrls.heatmap);
-        tabHeatmap.classList.toggle('hide', !hasHeatmap);
-        tabBox.textContent = finalStatus.includes('불량') ? '결함 박스' : '판정 스탬프';
-        layerTabs.classList.remove('hide');
+        if (layerUrls.heatmap) {
+            resultImg.classList.add('hide');   // 슬라이더가 대신 보여준다
+            layerTabs.classList.remove('hide');
 
-        // before = 원본, after = 선택 레이어. 원본 크기를 알아야 비교 상자 비율이 잡히므로
-        // 로드 완료(캐시 히트 포함) 시점에 fitCompareWrap을 한 번 호출한다.
-        beforeImg.src = finalOriginImgUrl;
-        selectLayer(hasHeatmap ? 'heatmap' : 'box');
-        setSplit(DEFAULT_SPLIT);
-        compareWrap.classList.remove('hide');
+            // before = 원본, after = 선택 레이어. 원본 크기를 알아야 비교 상자 비율이
+            // 잡히므로 로드 완료(캐시 히트 포함) 시점에 fitCompareWrap을 한 번 호출한다.
+            beforeImg.src = finalOriginImgUrl;
+            selectLayer('heatmap');
+            setSplit(DEFAULT_SPLIT);
+            compareWrap.classList.remove('hide');
 
-        if (beforeImg.complete && beforeImg.naturalWidth) {
-            fitCompareWrap();
-        } else {
-            beforeImg.addEventListener('load', fitCompareWrap, { once: true });
+            if (beforeImg.complete && beforeImg.naturalWidth) {
+                fitCompareWrap();
+            } else {
+                beforeImg.addEventListener('load', fitCompareWrap, { once: true });
+            }
         }
 
         if (finalStatus && finalStatus.includes("불량")) {
@@ -314,12 +316,12 @@ document.addEventListener('DOMContentLoaded', () => {
         resultImg.classList.add('hide');
         // [추가] before/after 슬라이더·탭도 초기 상태로 되돌린다
         beforeImg.src = '';
+        afterImg.src = '';
         layerUrls.heatmap = '';
         layerUrls.box = '';
         setSplit(DEFAULT_SPLIT);
         compareWrap.classList.add('hide');
         layerTabs.classList.add('hide');
-        tabHeatmap.classList.remove('hide');
         tabHeatmap.classList.add('active');
         tabBox.classList.remove('active');
         afterTag.textContent = 'AFTER · 히트맵';
