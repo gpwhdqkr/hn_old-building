@@ -46,6 +46,37 @@ body { background-color: #0b0f19; color: #a5b4fc; display: flex; justify-content
 .grid-background { position: absolute; width: 100%; height: 100%; background-size: 20px 20px; background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px); }
 /* [수정] 어떤 이미지가 들어와도 가로세로 비율을 유지하며 400px 내부에 꽉 맞춤 */
 .image-viewport img { width: 100%; height: 100%; object-fit: contain; z-index: 1; }
+/* ── before/after 비교 슬라이더 ───────────────────────────────────────────── */
+/* after 레이어(히트맵/박스) 전환 탭 줄 — 진단 완료 후에만 보인다 */
+.layer-tabs { display: flex; gap: 8px; margin-bottom: 8px; }
+/* 비활성 탭: 어두운 기본 상태 */
+.layer-tab { flex: 1; padding: 8px 10px; background: #0d1527; border: 1px solid #1e293b; color: #64748b; font-size: 0.9rem; font-weight: bold; cursor: pointer; border-radius: 4px; transition: all 0.2s; }
+/* 마우스를 올린 탭: 테두리만 살짝 밝힘 */
+.layer-tab:hover { border-color: #334155; color: #a5b4fc; }
+/* 선택된 탭: 시안색 네온 강조 */
+.layer-tab.active { background: rgba(0, 242, 254, 0.12); border-color: #00f2fe; color: #00f2fe; box-shadow: 0 0 10px rgba(0, 242, 254, 0.25); }
+/* 두 레이어를 겹쳐 담는 비교 상자 (크기는 JS가 원본 비율로 지정) */
+.compare-wrap { position: relative; z-index: 1; overflow: hidden; --split: 50%; user-select: none; touch-action: none; cursor: ew-resize; }
+/* 겹쳐 쌓이는 before/after 이미지 — 래퍼가 원본 비율이라 왜곡 없이 꽉 채운다.
+   .image-viewport img 규칙(object-fit: contain, z-index: 1)보다 우선하도록 선택자를
+   한 단계 더 주고 z-index도 1로 낮춰 둔다 (after 레이어가 위로 올라와야 함) */
+.compare-wrap img.compare-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: fill; display: block; z-index: 1; }
+/* after 레이어: 분할선 왼쪽을 잘라내어 아래 원본이 드러나게 함.
+   🔒 z-index 필수 — .image-viewport img의 z-index:1이 before 이미지에도 걸려서
+   이 값이 없으면 after가 before 뒤로 깔려 아무 변화가 없어 보인다 */
+.compare-after { position: absolute; inset: 0; z-index: 2; clip-path: inset(0 0 0 var(--split)); }
+/* 분할 경계선 — 슬라이더 핸들이 붙는 수직 라인 */
+.compare-divider { position: absolute; top: 0; bottom: 0; left: var(--split); width: 2px; background: #00f2fe; box-shadow: 0 0 10px rgba(0, 242, 254, 0.8); z-index: 4; }
+/* 좌우 드래그를 유도하는 원형 손잡이 */
+.compare-handle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 34px; height: 34px; border-radius: 50%; background: #0b0f19; border: 2px solid #00f2fe; color: #00f2fe; font-size: 11px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(0, 242, 254, 0.6); }
+/* BEFORE/AFTER 좌우 상단 라벨 공통 스타일 */
+.compare-tag { position: absolute; top: 8px; z-index: 5; font-size: 0.72rem; font-weight: bold; padding: 3px 7px; border-radius: 3px; background: rgba(11, 15, 25, 0.78); pointer-events: none; }
+/* 왼쪽(원본) 라벨 */
+.tag-before { left: 8px; color: #94a3b8; border: 1px solid #334155; }
+/* 오른쪽(판정 근거) 라벨 */
+.tag-after { right: 8px; color: #00f2fe; border: 1px solid #00f2fe; }
+/* ────────────────────────────────────────────────────────────────────────── */
+
 /* 3번 상태: 이미지를 위아래로 훑는 녹색 레이저 스캔 스틱 */
 .laser-line { position: absolute; left: 0; width: 100%; height: 4px; background: rgba(16, 185, 129, 0.8); box-shadow: 0 0 12px #10b981, 0 0 20px #10b981; z-index: 2; animation: scan 2s infinite ease-in-out; }
 /* 레이저 라인이 위아래로 반복 무한 스캔 구동되는 애니메이션 축 */
