@@ -31,6 +31,8 @@
 | `/predict` | POST | `house_image` 업로드 → 추론 → `templates/f_result.html` **조각 HTML** 반환 |
 | `/style.css` | GET | `templates/style.css`를 강제 서빙 (아래 "정적 파일" 항목 참고) |
 | `/script.js` | GET | `templates/script.js`를 강제 서빙 |
+| `/history` | GET | 쿠키 주인의 최근 진단 20건을 JSON으로 반환 (오류 건 포함) |
+| `/history/<id>` | GET | 저장된 진단 1건을 `/predict`와 **동일한 조각 HTML**로 반환. 남의 기록·오류 건은 404 |
 
 서버 기동: `python app/main.py` → `0.0.0.0:5000`, `debug=True`.
 
@@ -50,6 +52,10 @@
 
 - **모델 가중치**: `model/*.pth`는 `.gitignore` 대상이라 저장소에 없다. 서빙 PC에 파일이 실제로 있어야 기동된다.
 - **MongoDB**: DB `apartment_inspection_db`, 컬렉션 `inspection_logs`. 저장 실패해도 화면 출력은 계속되도록 try/except로 격리돼 있다 (`main.py:208-212`).
+  이력 기능용으로 `client_id`(쿠키 `hn_client_id`, 2일), `origin_file_name`, `origin_save_path`가 함께 저장된다.
+  이 세 필드가 없는 구 레코드는 이력 목록에 뜨지 않는다.
+  ⚠️ MongoDB가 죽으면 `MongoClient`의 기본 `serverSelectionTimeoutMS`(30초) 때문에 `/history`와 `insert_one`이
+  30초씩 블로킹된 뒤에야 넘어간다. 고치려면 `main.py:49`에 `serverSelectionTimeoutMS`를 주면 된다.
 - **배포 위치**: 웹서비스는 별도 PC(192.168.0.22)에서 구동된다. DB도 그쪽 localhost라 개발 PC에서는 종단 검증 불가.
 
 ---
@@ -86,6 +92,7 @@
 `progressBar` `progressText` `laserLine` `imageViewport` `previewImg` `resultImg` `gridBg`
 `dynamicResult` `compareWrap` `compareAfter` `compareDivider` `beforeImg` `afterImg` `afterTag`
 `layerTabs` `tabHeatmap` `tabBox` `backendUrls`
+`historyToggle` `historySidebar` `historyScrim` `historyList`
 
 ### 템플릿 변수 계약
 
@@ -149,6 +156,7 @@ md가 아닌 참고 자료: `docs/EfficientNet_사용설명서.pdf`, `docs/resne
 | 하려는 일 | 열 파일 |
 |---|---|
 | 화면 레이아웃/문구 수정 | `app/templates/finally.html`, `style.css` |
+| 진단 이력 사이드바 수정 | `app/main.py`의 `/history*` 라우트 + `script.js`·`style.css`의 `🆕 [진단 이력 기능]` 블록 |
 | 업로드·진행률·슬라이더 동작 수정 | `app/templates/script.js` |
 | 결과 표시 항목 변경 | `app/templates/f_result.html` (+ 필요 시 `main.py`의 `render_template` 인자) |
 | 라우트 추가/업로드 제한 변경 | `app/main.py` |

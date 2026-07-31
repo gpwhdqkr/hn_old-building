@@ -17,6 +17,7 @@
 | 결과 화면에 표시할 항목 변경 | `app/templates/f_result.html` + [docs/FRONTEND_GUIDE.md](docs/FRONTEND_GUIDE.md) |
 | **프론트↔백 데이터 규약 (변수 6종)** | [docs/FRONTEND_GUIDE.md](docs/FRONTEND_GUIDE.md) |
 | 라우트 추가 · 업로드 제한 · MongoDB 스키마 | `app/main.py` |
+| **진단 이력 사이드바** (쿠키 · 목록 · 과거 결과 복원) | `app/main.py`의 `/history*` + [docs/superpowers/specs/2026-07-31-history-sidebar-design.md](docs/superpowers/specs/2026-07-31-history-sidebar-design.md) |
 | 판정 임계값 · 전처리 · LayerCAM | `app/ai_engine.py` |
 | 결함 박스 · 히트맵 그리는 방식 | `app/cv_processor.py` |
 | **v3 모델 학습 · 재학습 · 평가 · 임계값 튜닝** | **[src/v3/README.md](src/v3/README.md)** |
