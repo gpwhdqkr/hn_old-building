@@ -9,7 +9,7 @@
 </head>
 <body>
     <!-- 🆕 [진단 이력 기능] 여기부터 추가 (2026-07-31) -->
-    <button type="button" id="historyToggle" class="history-toggle" aria-label="진단 이력 열기">☰</button>
+    <!-- ☰ 버튼은 아래 header.system-header 안, 상태 문구 오른쪽에 있다 -->
     <div id="historyScrim" class="history-scrim hide"></div>
     <aside id="historySidebar" class="history-sidebar" aria-label="진단 이력">
         <header class="history-header">진단 이력</header>
@@ -21,6 +21,7 @@
         <header class="system-header">
             <h1>AI 노후 건물 외벽 진단 시스템</h1>
             <div class="system-status" id="systemStatus">[SYSTEM READY: AWAITING INPUT]</div>
+            <button type="button" id="historyToggle" class="history-toggle" aria-label="진단 이력 열기">☰</button><!-- 🆕 [진단 이력 기능] 추가된 줄 (2026-07-31) -->
         </header>
 
         <!-- 메인 워크스페이스 -->
