@@ -364,13 +364,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return box;
     }
 
-    function renderHistory(items) {
+    function renderHistory(items, failed) {
         historyList.innerHTML = '';
 
         if (!items.length) {
             const empty = document.createElement('li');
             empty.className = 'history-empty';
-            empty.textContent = '아직 진단 이력이 없습니다.';
+            // failed === true면 DB 장애 등으로 못 받아온 것 — "이력이 없다"고 단언하면 거짓말이 된다
+            empty.textContent = failed ? '이력을 불러오지 못했습니다.' : '아직 진단 이력이 없습니다.';
             historyList.appendChild(empty);
             return;
         }
@@ -422,8 +423,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // 열 때마다 새로 받는다 — 방금 끝낸 진단이 바로 목록에 보인다
         fetch('/history')
             .then(res => res.json())
-            .then(data => renderHistory(data.items || []))
-            .catch(() => renderHistory([]));
+            .then(data => renderHistory(data.items || [], !!data.error))
+            .catch(() => renderHistory([], true));  // 네트워크 실패도 DB 장애와 같은 문구로 안내
     }
 
     /** 저장된 진단 1건을 화면에 되살린다.

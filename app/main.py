@@ -274,9 +274,9 @@ def history_list():
         return jsonify({"items": items})
 
     except Exception as history_err:
-        # DB 장애가 화면을 죽이지 않도록 격리 — insert_one과 같은 방침
+        # DB 장애가 화면을 죽이지 않도록 격리하되, "이력이 없다"고 단언하지는 않는다
         print(f"❌ 이력 목록 조회 오류: {history_err}")
-        return jsonify({"items": []})
+        return jsonify({"items": [], "error": True})
 
 @app.route('/history/<item_id>')
 def history_detail(item_id):
