@@ -1,0 +1,128 @@
+/* 전체 요소 마진/패딩 초기화 및 SF 폰트 지정 */
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace, sans-serif; }
+/* 전체 화면 어두운 테마 배경 설정 및 중앙 정렬 */
+body { background-color: #0b0f19; color: #a5b4fc; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+/* 시스템 전체를 감싸는 테두리 및 그림자 상자 */
+.system-container { width: 100%; max-width: 1200px; background: #0d1527; border: 1px solid #1e293b; border-radius: 8px; padding: 20px; box-shadow: 0 0 30px rgba(0, 242, 254, 0.1); }
+/* 메인 타이틀과 우측 상태 표시창 배치 레이아웃 */
+.system-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e293b; padding-bottom: 15px; margin-bottom: 20px; }
+/* 시스템 대제목 텍스트 색상 및 크기 고정 */
+.system-header h1 { font-size: 1.5rem; color: #f8fafc; }
+/* [SYSTEM READY] 문구 푸른색 네온 발광 효과 */
+.system-status { color: #00f2fe; font-weight: bold; text-shadow: 0 0 8px rgba(0, 242, 254, 0.5); }
+/* 좌측 조작계와 우측 화면 뷰어를 나누는 그리드 */
+.workspace { display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; }
+/* 파일 선택 영역과 로그 창을 담는 수직 정렬 보드 */
+.control-panel { display: flex; flex-direction: column; justify-content: space-between; background: #090d16; border: 1px solid #1e293b; border-radius: 6px; padding: 20px; min-height: 400px; }
+/* 1번 상태: 드래그 앤 드롭 파일 업로드용 점선 테두리 상자 */
+.upload-box { border: 2px dashed #334155; border-radius: 6px; padding: 60px 20px; text-align: center; cursor: pointer; transition: all 0.2s ease-in-out; }
+/* 파일을 박스 위로 끌고 왔을 때 활성화되는 발광 배경 */
+.upload-box.dragover { border-color: #00f2fe; background: rgba(0, 242, 254, 0.1); color: #f8fafc; scale: 1.02; }
+/* 업로드 아이콘 크기 및 하단 간격 정의 */
+.upload-icon { font-size: 2.5rem; margin-bottom: 10px; }
+/* 3번 상태: 진행 바와 코드가 출력되는 영역 정렬 */
+.log-zone { flex-grow: 1; margin-top: 10px; display: flex; flex-direction: column; justify-content: space-between; }
+/* 인공지능 실행 코드가 흐르는 가상 검은색 터미널 화면 */
+.code-log { font-size: 0.85rem; color: #38bdf8; line-height: 1.8; background: #050810; padding: 15px; border: 1px solid #1e293b; border-radius: 4px; height: 160px; }
+/* 스캔 중 텍스트가 깜빡이도록 처리하는 애니메이션 이름 지정 */
+.blink { animation: textBlink 1s infinite; }
+/* 텍스트가 서서히 나타났다 사라지는 깜빡임 투명도 설정 */
+@keyframes textBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+/* 진행도 게이지바를 감싸는 회색 배경 트랙 패널 */
+.progress-container { background: #1e293b; border-radius: 4px; height: 26px; position: relative; overflow: hidden; margin-top: 15px; }
+/* 실시간 스캔률에 맞추어 좌측에서 차오르는 네온 그라데이션 바 */
+.progress-bar { background: linear-gradient(90deg, #00f2fe, #4facfe); width: 0%; height: 100%; transition: width 0.05s linear; }
+/* 진행률 퍼센트 숫자를 바 중앙 정면에 올리는 텍스트 오버레이 */
+.progress-text { position: absolute; width: 100%; text-align: center; top: 50%; left: 50%; transform: translate(-50%, -13px); font-size: 0.85rem; color: #fff; font-weight: bold; }
+/* 비활성화 상태의 어두운 진단 버튼 스타일 */
+.btn-diagnose { width: 100%; padding: 15px; background: #1e293b; border: 1px solid #334155; color: #64748b; font-size: 1.1rem; font-weight: bold; cursor: not-allowed; border-radius: 4px; margin-top: 20px; transition: all 0.3s; }
+/* 파일이 로드되었을 때 활성화되는 녹색 버튼 발광 효과 */
+.btn-diagnose.active { background: #059669; border-color: #10b981; color: #ffffff; cursor: pointer; box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
+/* 우측 모니터 프레임 레이아웃 및 기준점 설정 */
+.viewer-panel { background: #090d16; border: 1px solid #1e293b; border-radius: 6px; padding: 10px; position: relative; }
+/* [수정] 원본 이미지 높이에 영향받지 않게 높이를 510px로 꽉 고정 */
+.image-viewport { width: 100%; height: 510px; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; background: #050810; border: 1px solid #1e293b; }
+/* 백그라운드 그리드 사각형 격자 무늬 배경 묘사 */
+.grid-background { position: absolute; width: 100%; height: 100%; background-size: 20px 20px; background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px); }
+/* [수정] 어떤 이미지가 들어와도 가로세로 비율을 유지하며 400px 내부에 꽉 맞춤 */
+.image-viewport img { width: 100%; height: 100%; object-fit: contain; z-index: 1; }
+/* ── before/after 비교 슬라이더 ───────────────────────────────────────────── */
+/* after 레이어(히트맵/박스) 전환 탭 줄 — 진단 완료 후에만 보인다 */
+.layer-tabs { display: flex; gap: 8px; margin-bottom: 8px; }
+/* 비활성 탭: 어두운 기본 상태 */
+.layer-tab { flex: 1; padding: 8px 10px; background: #0d1527; border: 1px solid #1e293b; color: #64748b; font-size: 0.9rem; font-weight: bold; cursor: pointer; border-radius: 4px; transition: all 0.2s; }
+/* 마우스를 올린 탭: 테두리만 살짝 밝힘 */
+.layer-tab:hover { border-color: #334155; color: #a5b4fc; }
+/* 선택된 탭: 시안색 네온 강조 */
+.layer-tab.active { background: rgba(0, 242, 254, 0.12); border-color: #00f2fe; color: #00f2fe; box-shadow: 0 0 10px rgba(0, 242, 254, 0.25); }
+/* 두 레이어를 겹쳐 담는 비교 상자 (크기는 JS가 원본 비율로 지정) */
+.compare-wrap { position: relative; z-index: 1; overflow: hidden; --split: 50%; user-select: none; touch-action: none; cursor: ew-resize; }
+/* 겹쳐 쌓이는 before/after 이미지 — 래퍼가 원본 비율이라 왜곡 없이 꽉 채운다.
+   .image-viewport img 규칙(object-fit: contain, z-index: 1)보다 우선하도록 선택자를
+   한 단계 더 주고 z-index도 1로 낮춰 둔다 (after 레이어가 위로 올라와야 함) */
+.compare-wrap img.compare-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: fill; display: block; z-index: 1; }
+/* after 레이어: 분할선 왼쪽을 잘라내어 아래 원본이 드러나게 함.
+   🔒 z-index 필수 — .image-viewport img의 z-index:1이 before 이미지에도 걸려서
+   이 값이 없으면 after가 before 뒤로 깔려 아무 변화가 없어 보인다 */
+.compare-after { position: absolute; inset: 0; z-index: 2; clip-path: inset(0 0 0 var(--split)); }
+/* 분할 경계선 — 슬라이더 핸들이 붙는 수직 라인 */
+.compare-divider { position: absolute; top: 0; bottom: 0; left: var(--split); width: 2px; background: #00f2fe; box-shadow: 0 0 10px rgba(0, 242, 254, 0.8); z-index: 4; }
+/* 좌우 드래그를 유도하는 원형 손잡이 */
+.compare-handle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 34px; height: 34px; border-radius: 50%; background: #0b0f19; border: 2px solid #00f2fe; color: #00f2fe; font-size: 11px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(0, 242, 254, 0.6); }
+/* BEFORE/AFTER 좌우 상단 라벨 공통 스타일 */
+.compare-tag { position: absolute; top: 8px; z-index: 5; font-size: 0.72rem; font-weight: bold; padding: 3px 7px; border-radius: 3px; background: rgba(11, 15, 25, 0.78); pointer-events: none; }
+/* 왼쪽(원본) 라벨 */
+.tag-before { left: 8px; color: #94a3b8; border: 1px solid #334155; }
+/* 오른쪽(판정 근거) 라벨 */
+.tag-after { right: 8px; color: #00f2fe; border: 1px solid #00f2fe; }
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/* 3번 상태: 이미지를 위아래로 훑는 녹색 레이저 스캔 스틱 */
+.laser-line { position: absolute; left: 0; width: 100%; height: 4px; background: rgba(16, 185, 129, 0.8); box-shadow: 0 0 12px #10b981, 0 0 20px #10b981; z-index: 2; animation: scan 2s infinite ease-in-out; }
+/* 레이저 라인이 위아래로 반복 무한 스캔 구동되는 애니메이션 축 */
+@keyframes scan { 0% { top: 0%; } 50% { top: 100%; } 100% { top: 0%; } }
+/* 4번 상태: 진단이 완료된 뒤 이미지 위에 빨간 박스를 가리는 레이어 */
+.result-overlay { position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: 3; pointer-events: none; }
+/* 건물 크랙 부위를 특정하는 붉은색 타겟팅 가이드 박스 */
+.bounding-box { position: absolute; top: 35%; left: 60%; width: 90px; height: 80px; border: 2px solid #ef4444; box-shadow: 0 0 8px #ef4444; background: rgba(239, 68, 68, 0.15); }
+/* 결함 유형 코드와 신뢰도(Confidence) 퍼센트 플래그 네임 */
+.box-label { position: absolute; top: -22px; left: -2px; background: #ef4444; color: white; font-size: 10px; padding: 2px 5px; white-space: nowrap; font-weight: bold; }
+/* 4번 상태: 판정 결과와 불량 통계가 등장하는 하단 경고판 블록 */
+.result-panel { margin-top: 20px; padding: 20px; background: rgba(239, 68, 68, 0.03); border: 1px solid #ef4444; border-radius: 6px; animation: fadeIn 0.4s ease-out; }
+/* 우수 등급과 불량 백분율 지표를 가로로 배치하는 바 차트 행 가이드 */
+.chart-container { display: flex; align-items: center; margin-bottom: 15px; gap: 15px; }
+/* 기본 우수(초록색) 상태로 채워진 전체 가로 차트 축 */
+.bar-chart { flex-grow: 1; height: 20px; background: #10b981; border-radius: 3px; overflow: hidden; position: relative; }
+/* 오른쪽에서부터 80% 비율을 빨간색으로 채워 불량 비중 표현 */
+.bar-bad-fill { position: absolute; right: 0; width: 80%; height: 100%; background: #ef4444; }
+/* 차트 왼쪽 우수 상태 수치 색상 강조 */
+.label-good { color: #10b981; font-weight: bold; }
+/* 차트 오른쪽 불량 상태 수치 색상 강조 */
+.label-bad { color: #ef4444; font-weight: bold; }
+/* 경고 아이콘과 건물 '불량' 판정 제목 폰트 스타일 */
+.result-title { color: #ef4444; font-size: 1.2rem; margin-bottom: 8px; }
+/* 음영 불연속성 등 크랙 발생 원인 진단 분석 문장 줄간격 설정 */
+.result-desc { color: #cbd5e1; font-size: 0.95rem; line-height: 1.5; }
+/* 본문 설명 중 붉은색 글자 강조 단어 처리 */
+.highlight-red { color: #ef4444; font-weight: bold; }
+/* 특정 조건 전(로딩 중 등)에 요소를 가려두는 화면 숨김 제어 */
+.hide { display: none !important; }
+/* 결과 패널이 위로 쓱 올라오며 뚜렷해지는 등장 애니메이션 효과 */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+
+
+.source-content {
+    display : none;
+}
+
+/* 3. 🔥 [핵심] 컨테이너에 마우스를 올리면(.ppp-container:hover) 
+      내부에 있던 설명 글(.source-content)의 display를 복구시킴 */
+.ppp:hover .source-content {
+    display: block;
+    cursor : pointer;
+    
+}
+.ppp:hover .ppp-title{
+    display: none;   
+}

@@ -1,0 +1,66 @@
+﻿========== 전처리 v2 최종 검증 리포트 ==========
+대상: D:\hn_old-building\data\processed\metadata_split_v2.csv
+      D:\hn_old-building\data\processed\annotations_v2.jsonl
+
+----- 1. 행 수 대사 -----
+CSV 행 수: 37285
+JSONL 행 수: 77432 / 고유 source_data_id: 37285
+[PASS] CSV source_data_id 중복 없음
+[PASS] CSV와 JSONL의 source_data_id 집합 일치
+[PASS] sum(n_annotations)=77432 == JSONL 행 수=77432
+[PASS] JSONL class_id 값 유효 (['1', '2', '3'])
+
+----- 2. 기존(v1) metadata.csv 교차 대조 -----
+[PASS] v2(37285) >= v1(37285)
+v2 - v1 차집합(혼합 구제분): 0건 (0건이면 구제 no-op으로 정상)
+[PASS] 공통 행 merge 수 == v1 행 수
+[PASS] 공통 행 class_id 일치 (v1 단일값 == v2 max)
+[PASS] 공통 행 group_id 일치 (파일명 파생 == Raw_Data_ID)
+[PASS] 공통 행 image_path 문자열 완전 일치 (기존 소비 코드 호환)
+
+----- 3. 라벨 무결성 (이원화) -----
+[PASS] class_id<->model_label 이원화 규칙 위반 0건
+[PASS] class_name 값 유효 (['불량', '우수'])
+이원화 분포: {1: 34019, 0: 3266} (binclf 기준 {0: 3266, 1: 34019}, 구제분 0건 차이 허용)
+[PASS] 총 행 수 == binclf 기준 합 + 구제분
+[PASS] 이원화 분포가 binclf 기준값과 정확히 일치
+is_mixed=1 행 수: 0
+[PASS] n_defect_annotations>0 <=> model_label==1
+
+----- 4. 경로 무결성 -----
+[PASS] image_path에 '?' 없음 (한글 인코딩 파손 검출)
+[PASS] image_path에 'raw/images/' 마커 정확히 1회
+[PASS] image_path == 가상 접두 + image_relpath 정합
+[PASS] processed_images 리사이즈본 실존 (누락 0건)
+[PASS] 원본 이미지 실존 (누락 0건)
+
+----- 5. 스플릿 무결성 -----
+[PASS] split 값 유효 (['test', 'train', 'validation'])
+[PASS] train/validation/test 그룹 교집합 0 (누수 없음)
+
+split별 이미지 수 / 그룹 수:
+  train      :  26022장 / 1200그룹 (0.698)
+  validation :   5587장 /  256그룹 (0.150)
+  test       :   5676장 /  259그룹 (0.152)
+
+split x class_name (이미지 수):
+class_name     불량    우수
+split                  
+train       23630  2392
+validation   5161   426
+test         5228   448
+
+split x middle_id (이미지 수):
+middle_id      C     F     L     P     T     W     X
+split                                               
+train       3588  2663  2997  4898  3302  3952  4622
+validation   787   507   631  1004   719   843  1096
+test         766   576   661  1057   784   795  1037
+
+[참고] v1 metadata_split.csv와 split 일치율: 53.2% - 계층화 방식이 달라 불일치가 정상. v1 산출물과 혼용 금지.
+
+----- 6. utf-8-sig 재로드 무결성 -----
+[PASS] 재로드 행 수 일치
+[PASS] 재로드 한글 무결 (class_name/middle_name)
+
+========== 전 항목 통과 ==========

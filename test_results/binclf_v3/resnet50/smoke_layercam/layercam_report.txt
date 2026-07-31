@@ -1,0 +1,12 @@
+LayerCAM 위치 채점 리포트 (binclf_v3)
+모델 : best_resnet50_binclf_v3_finetuned_smoke.pth / 장치 : cpu
+대상 : test 불량 이미지 29장 채점 (bbox 없음/크롭 밖 제외 3장, LIMIT_IMAGES=32)
+
+pointing game (히트맵 피크가 GT bbox 안) : 0.0000
+  - 불량 정분류(p>=0.5)에서만           : 0.0000
+에너지 집중도 (히트맵 총합 중 bbox 내부) : 0.1008
+  - 참조: bbox 면적 비율(무작위 기대치)  : 0.1352
+
+해석 기준: pointing game이 bbox 면적 비율보다 크게 높을수록
+히트맵이 결함을 실제로 가리키는 것. 상세는 layercam_scores.csv
+(metadata와 join하면 그룹/원등급별 슬라이스 채점 가능).

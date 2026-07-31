@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 노후 건물 외벽 진단 시스템</title>
+    <!-- templates/finally.html 상단 헤더 -->
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="system-container">
+        <!-- 상단 헤더 -->
+        <header class="system-header">
+            <h1>AI 노후 건물 외벽 진단 시스템</h1>
+            <div class="system-status" id="systemStatus">[SYSTEM READY: AWAITING INPUT]</div>
+        </header>
+
+        <!-- 메인 워크스페이스 -->
+        <main class="workspace">
+            <!-- 좌측 조작반 -->
+            <section class="control-panel">
+                <!-- 1번 상태: 파일 투하 가이드 상자 -->
+                <div class="upload-zone" id="uploadZone">
+                    <input type="file" id="fileInput" name="house_image" accept="image/*" hidden>
+                    <div class="upload-box" id="uploadBox">
+                        <div class="upload-icon">📁</div>
+                        <p id="uploadText">사진을 여기로 드래그하거나<br>클릭하여 업로드하세요
+                        <br><br>(50Mb이하, .png .jpg .jpeg .jfif 만 가능. 
+                        <br>해상도 가로, 세로 1024 이하.
+                        <br>진단하고 싶은 하자가 정중앙에 위치한 사진 권장.)</p>
+                    </div>
+                    <div style="padding-left : 30px; padding-top : 15px;">
+                        <h4>모델 사용법</h4>
+                        <li>1. 상단의 조건에 해당하는 이미지 파일을 첨부하시오.</li>
+                        <li>2. 우측 화면을 통해 검사 대상 이미지를 확인하시오.</li>
+                        <li>3. 맞다면, 아래 초록색의 '진단 시작' 버튼을 누르시오.</li>
+                        <li>4. 로딩 후 아래에 나온 결과를 참조하시오.</li>
+                    </div>
+                </div>
+
+                <!-- 3번 상태: 실시간 모델 추론 흐름 기동 터미널 -->
+                <div class="log-zone hide" id="logZone">
+                    <br>
+                    <br>
+                    <br>
+                    <div class="code-log">
+                        <p>> [INFO] Initializing ConvNeXt-Tiny Engine...</p>
+                        <p>> [INFO] Connecting to CUDA core...</p>
+                        <p>> [DATA] Transferring payload to model tensor...</p>
+                        <p>> [COMPUTING] LayerCAM tracking in progress...</p>
+                    </div>
+
+
+                    <div style="padding-left : 30px; padding-top : 15px;">
+                        <h4>모델 사용법</h4>
+                        <li>1. 상단의 조건에 해당하는 이미지 파일을 첨부하시오.</li>
+                        <li>2. 우측 화면을 통해 검사 대상 이미지를 확인하시오.</li>
+                        <li>3. 맞다면, 아래 초록색의 '진단 시작' 버튼을 누르시오.</li>
+                        <li>4. 로딩 후 아래에 나온 결과를 참조하시오.</li>
+                    </div>
+                    
+                    <div class="progress-container">
+                        <div class="progress-bar" id="progressBar"></div>
+                        <span class="progress-text" id="progressText">[ANALYZING... 0%]</span>
+                    </div>
+                </div>
+
+
+                <!-- 통합 기동 스위치 -->
+                <button class="btn-diagnose" id="btnDiagnose" disabled>진단 시작</button>
+            </section>
+
+            <!-- 우측 모니터 스크린 -->
+            <section class="viewer-panel">
+                <!-- after 레이어 전환 탭 (진단 완료 후에만 노출) -->
+                <div class="layer-tabs hide" id="layerTabs">
+                    <button type="button" class="layer-tab active" id="tabHeatmap" data-layer="heatmap">히트맵</button>
+                    <button type="button" class="layer-tab" id="tabBox" data-layer="box">결함 박스</button>
+                </div>
+
+                <div class="image-viewport" id="imageViewport">
+                    <!-- 초기 가상 디스플레이 그리드 격자 -->
+                    <div class="grid-background" id="gridBg"></div>
+                    <!-- 로컬 브라우저가 수신한 원본 프리뷰 -->
+                    <img id="previewImg" src="" alt="건물 이미지" class="hide">
+
+                    <!-- OpenCV 인코딩 처리가 완료되어 반환된 타겟 이미지 -->
+                    <img id="resultImg" src="" alt="진단 결과 이미지" class="hide">
+
+                    <!-- [추가] 불량 판정에서만 쓰는 before/after 비교 슬라이더.
+                         우수 판정은 이 블록을 쓰지 않고 위의 resultImg만 그대로 보여준다.
+                         래퍼 크기는 script.js가 원본 비율에 맞춰 계산해 넣는다
+                         (두 레이어가 픽셀 단위로 정확히 겹쳐야 경계가 자연스럽다) -->
+                    <div class="compare-wrap hide" id="compareWrap">
+                        <img id="beforeImg" class="compare-layer" src="" alt="원본 이미지">
+                        <!-- clip-path로 좌측을 잘라 원본이 드러나게 한다 -->
+                        <div class="compare-after" id="compareAfter">
+                            <img id="afterImg" class="compare-layer" src="" alt="판정 근거 이미지">
+                        </div>
+                        <div class="compare-divider" id="compareDivider">
+                            <span class="compare-handle">◀▶</span>
+                        </div>
+                        <span class="compare-tag tag-before">BEFORE · 원본</span>
+                        <span class="compare-tag tag-after" id="afterTag">AFTER · 히트맵</span>
+                    </div>
+
+                    <!-- 동적 스캔 라인 스틱 -->
+                    <div class="laser-line hide" id="laserLine"></div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 4번 상태: 백엔드 main.py의 result.html 텍스트 스트림이 투하될 동적 영역 -->
+        <div id="dynamicResult" class="hide"></div>
+
+        <br>
+        <div style="display : flex; justify-content : center;" class="ppp">
+            <h3 class="ppp-title">출처</h3>
+            <h4 class="source-content"> 해당 모델은 AI-Hub에 있는 '서울시 노후 주택 균열 데이터'를 이용해 학습시켰습니다.  </h4>
+        </div>
+
+    </div>
+
+    <!-- templates/finally.html 맨 하단 스크립트 -->
+<script src="script.js"></script>
+</body>
+</html>
