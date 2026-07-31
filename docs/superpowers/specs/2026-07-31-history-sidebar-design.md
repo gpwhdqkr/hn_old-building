@@ -102,13 +102,31 @@
   | `inference_ms` | `inference_time_ms` |
   | `peak_x`, `peak_y` | `None` 고정 (템플릿이 쓰지 않음) |
 
-**공용 헬퍼 2개를 추출한다.** `predict()`와 `/history/<id>`가 같은 계산을 하므로,
-복사해 두면 임계값이 바뀔 때 한쪽만 고쳐지는 종류의 버그가 난다.
+**URL 변환과 확률 % 계산은 `predict()`에서 복사해 쓴다.** 헬퍼로 빼면 `predict()`의
+기존 줄을 고쳐야 해서 팀원 작업과 충돌한다. `predict()`는 **한 줄도 건드리지 않는다.**
 
-- `to_web_path(path)` — 역슬래시 → 슬래시, 앞에 `/` 부착 ([main.py:169-173](../../../app/main.py)에서 이동)
-- `to_probability_percent(defect_probability, is_defect)` — ([main.py:176-181](../../../app/main.py)에서 이동)
+대신 복사한 자리 위에 **교체용 코드를 주석으로 남긴다.** 나중에 팀 작업이 정리되면
+주석을 살리고 양쪽 인라인 계산을 지우면 된다.
 
-`predict()`는 이 헬퍼를 쓰도록 바꾼다. 동작은 동일하다.
+```python
+# ⚠️ 아래 두 계산은 predict()의 169-181행과 같은 내용입니다 (의도적 중복).
+#    팀 작업이 정리되면 아래 헬퍼를 살리고, 여기와 predict() 양쪽의
+#    인라인 계산을 헬퍼 호출로 바꿔 주세요.
+#
+# def to_web_path(path):
+#     """윈도우 물리 경로를 웹 URL로. 없으면 None."""
+#     return f"/{path.replace(chr(92), '/')}" if path else None
+#
+# def to_probability_percent(defect_probability, is_defect):
+#     """불량 확률 원값 → 판정된 클래스의 % 값."""
+#     if defect_probability is None:
+#         return None
+#     return round((defect_probability if is_defect else 1 - defect_probability) * 100, 1)
+```
+
+**알려진 대가** — 확률 표시 방식(소수 자리수 등)이나 경로 변환을 바꿀 때 두 곳을 같이
+고쳐야 한다. 한쪽만 고치면 새 진단과 이력 복원 화면의 값이 어긋난다. 위 주석이 그
+경고 역할을 한다.
 
 ### 4.2 프론트 — 마크업 (`app/templates/finally.html`)
 
@@ -234,8 +252,8 @@
 "origin_save_path": file_path,   # 🆕 [진단 이력 기능] 추가된 줄 (2026-07-31)
 ```
 
-기존 줄을 고치는 곳은 세 군데뿐이다 — `log_document` 딕셔너리(필드 3개 추가),
-`predict()`의 URL·확률 계산부(헬퍼 호출로 교체), `home()`(쿠키 발급).
+기존 줄을 고치는 곳은 **두 군데뿐이다** — `log_document` 딕셔너리(필드 3개 추가)와
+`home()`(쿠키 발급). `predict()` 본문은 한 줄도 건드리지 않는다.
 
 ---
 
@@ -243,7 +261,7 @@
 
 | 파일 | 변경 |
 |---|---|
-| `app/main.py` | 쿠키 발급·읽기, `log_document` 필드 3개, 헬퍼 2개 추출, `/history`·`/history/<id>` |
+| `app/main.py` | 쿠키 발급·읽기, `log_document` 필드 3개, `/history`·`/history/<id>` (`predict()` 본문은 무수정) |
 | `app/templates/finally.html` | 햄버거 버튼 · 사이드바 · 스크림 마크업 |
 | `app/templates/style.css` | 사이드바 스타일 (파일 끝 블록) |
 | `app/templates/script.js` | 목록 조회·렌더·복원 (콜백 끝 블록) |
