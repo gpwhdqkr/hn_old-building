@@ -1,6 +1,6 @@
 <!-- templates/result.html 전체를 아래 코드로 완전히 덮어씌워 주세요 -->
 <footer class="result-panel">
-    <div class="result-summary" style="padding-left : 10vw;">
+    <div class="result-summary" >
         <div class="status-meta">
             <h3 class="meta-tag inference-speed">추론 속도: {{ inference_ms }}ms</h3>
        
@@ -11,7 +11,7 @@
         <br>
 
        
-        <div class="chart-container" style="width: 80%;">
+        <div class="chart-container" style="width: 90%;">
             {% if "우수" in ai_result %}
             <span class="label-good">우수 {{ probability_percent }}%</span>
             <div class="bar-chart">

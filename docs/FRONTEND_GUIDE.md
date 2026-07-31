@@ -46,6 +46,28 @@ Jinja2에서 `{{ 변수명 }}`으로 바로 사용하면 됩니다.
 {% endif %}
 ```
 
+## 진단 이력 (`/history`, `/history/<id>`)
+
+좌측 사이드바에서 지난 진단을 다시 열 수 있습니다. 사용자 구분은 **`hn_client_id` 쿠키(2일)** 하나로만 합니다
+— 로그인이 없으므로 쿠키를 지우면 이력이 사라집니다.
+
+- `GET /history` → `{"items":[{"id","date","status","thumb"}]}`. 최근 **20건**, `date`는 `MM/DD HH:MM`(연도 없음),
+  `status`는 `"우수"`/`"불량"`/`"오류"`, `thumb`은 원본 사진 URL(없으면 `null`).
+  쿠키가 없거나 DB 장애면 빈 목록을 돌려줍니다 — 화면이 죽지 않는 것이 우선입니다.
+- `GET /history/<id>` → **`/predict`와 완전히 같은 형식의 `f_result.html` 조각**. 그래서 프론트는 이 응답을
+  기존 `injectBackendResult()`에 그대로 넘기면 되고, 슬라이더·레이어 탭 로직은 손댈 필요가 없습니다.
+  남의 기록·오류 건·확률 없는 건은 404입니다.
+
+**복원 시 반드시 지킬 것 — 이전 레이어를 먼저 걷어내세요.**
+`injectBackendResult()`는 히트맵이 있을 때 슬라이더·탭을 **켜기만 하고, 없을 때 끄지는 않습니다.**
+정상 진단 흐름에서는 파일을 새로 고를 때 `renderPreview()`가 미리 감춰 주지만, 이력 복원 경로에는 그 단계가
+없습니다. 그래서 불량 건을 복원한 뒤 우수 건을 복원하면 **직전 불량 건의 슬라이더와 탭이 화면에 남습니다.**
+`restoreFromHistory()`가 `injectBackendResult()` 호출 직전에 `compareWrap`과 `layerTabs`에 `hide`를 붙이는
+이유가 이것입니다. 복원 경로를 새로 만들 때도 같은 정리가 필요합니다.
+
+`peak_x` / `peak_y`는 복원 시 항상 `None`입니다 — `f_result.html`이 쓰지 않아 DB에 저장하지 않기 때문입니다.
+나중에 이 값을 화면에 표시하려면 `main.py`의 `log_document`에 저장부터 추가해야 합니다.
+
 ## before/after 슬라이더 + 레이어 탭 (현재 `finally.html` 구현)
 
 불량 판정 화면은 **원본(before) ↔ 판정 근거(after)** 를 좌우로 겹쳐 놓고 분할선을 끌어
