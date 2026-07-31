@@ -443,6 +443,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 laserLine.classList.add('hide');
                 progressBar.style.width = '100%';
                 progressText.textContent = '[ANALYZING... 100%]';
+                // 이전 복원이 남긴 슬라이더·탭을 먼저 걷어낸다.
+                // injectBackendResult()는 히트맵이 있을 때 켜기만 하고 없을 때 끄지 않으므로,
+                // 우수 건을 복원하면 직전 불량 건의 레이어가 그대로 남는다 (renderPreview와 같은 정리).
+                compareWrap.classList.add('hide');
+                layerTabs.classList.add('hide');
                 injectBackendResult(htmlResult);
             })
             .catch(err => alert(err.message));
