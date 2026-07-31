@@ -407,7 +407,10 @@ document.addEventListener('DOMContentLoaded', () => {
             row.appendChild(badge);
 
             if (!isError) {
-                row.addEventListener('click', () => restoreFromHistory(item.id));
+                row.addEventListener('click', () => {
+                    if (row.classList.contains('is-error')) return;   // 썸네일이 404난 뒤 클릭 차단
+                    restoreFromHistory(item.id);
+                });
             }
             historyList.appendChild(row);
         });
