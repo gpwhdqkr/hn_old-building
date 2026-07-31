@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 # ➔ [수정 코드] 맨 뒤에 ', send_from_directory'를 추가합니다.
-from flask import Flask, render_template, request, send_from_directory
+from flask import Flask, render_template, request, send_from_directory, make_response, jsonify, abort  # 🆕 [진단 이력 기능] make_response, jsonify, abort 추가 (2026-07-31)
 import torch
 import cv2
 import numpy as np
@@ -53,7 +53,11 @@ collection = db["inspection_logs"]
 
 @app.route('/')
 def home():
-    return render_template('finally.html')
+    resp = make_response(render_template('finally.html'))                       # 🆕 [진단 이력 기능] 수정된 줄 (2026-07-31)
+    if not request.cookies.get(CLIENT_ID_COOKIE):                              # 🆕 [진단 이력 기능] 추가된 줄 — 상수는 파일 하단 블록
+        resp.set_cookie(CLIENT_ID_COOKIE, uuid.uuid4().hex,                    # 🆕 [진단 이력 기능] 추가된 줄
+                        max_age=CLIENT_ID_MAX_AGE, httponly=True, samesite='Lax')  # 🆕 [진단 이력 기능] 추가된 줄
+    return resp                                                                 # 🆕 [진단 이력 기능] 수정된 줄
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -191,6 +195,9 @@ def predict():
     log_document = {
         "_id": ObjectId(),                               # 다큐먼트 고유 ID
         "origin_id": ObjectId(),                         # 원본 참조용 고유 ID
+        "client_id": request.cookies.get(CLIENT_ID_COOKIE),  # 🆕 [진단 이력 기능] 추가된 줄 (2026-07-31)
+        "origin_file_name": unique_filename,                 # 🆕 [진단 이력 기능] 추가된 줄 (2026-07-31)
+        "origin_save_path": file_path,                       # 🆕 [진단 이력 기능] 추가된 줄 (2026-07-31)
         "result_file_name": result_file_name,            # 결과 파일명
         "save_path": display_image_path,                 # 서버 내부 물리 저장 경로 (역슬래시 유지)
         "heatmap_file_name": (                           # 히트맵 이미지 파일명 (없으면 None)
@@ -230,6 +237,17 @@ def predict():
         peak_y=peak_y,                       # ④ 확인 요망 지점 y (원본 픽셀 좌표, 근사치. 우수면 None)
         inference_ms=inference_time_ms       # ⑤ 이미지 1장 추론 속도 (ms)
     )
+
+# =========================================================================
+# ── 🆕 [진단 이력 기능] 여기부터 추가 (2026-07-31) ──────────────────────
+# 좌측 사이드바 진단 이력. 설계: docs/superpowers/specs/2026-07-31-history-sidebar-design.md
+# =========================================================================
+
+CLIENT_ID_COOKIE = "hn_client_id"     # 이력 식별용 쿠키 이름 (로그인이 없어 쿠키로만 구분)
+CLIENT_ID_MAX_AGE = 60 * 60 * 24 * 2  # 2일. 이력도 사실상 이틀치가 된다
+HISTORY_LIMIT = 20                    # 목록에 띄우는 최대 건수
+
+# ── 🆕 [진단 이력 기능] 여기까지 ────────────────────────────────────────
 
 if __name__ == '__main__':
     # 클라우드 컨테이너 포트 바인딩 및 외부 접속 유연화를 위해 기본 호스트 오픈 적용
