@@ -278,6 +278,68 @@ def history_list():
         print(f"❌ 이력 목록 조회 오류: {history_err}")
         return jsonify({"items": []})
 
+@app.route('/history/<item_id>')
+def history_detail(item_id):
+    """저장된 진단 1건을 /predict와 똑같은 f_result.html 조각으로 복원한다.
+    프론트는 이 응답을 기존 injectBackendResult()에 그대로 넘기면 된다."""
+    client_id = request.cookies.get(CLIENT_ID_COOKIE)
+    if not client_id:
+        abort(404)
+
+    try:
+        doc = collection.find_one({"_id": ObjectId(item_id)})
+    except Exception as detail_err:
+        # ObjectId 형식 오류 또는 DB 장애
+        print(f"❌ 이력 상세 조회 오류: {detail_err}")
+        abort(404)
+
+    # 남의 기록 열람 차단 + 복원할 결과가 없는 건 제외
+    if not doc or doc.get("client_id") != client_id or doc.get("status") == "오류":
+        abort(404)
+
+    origin = doc.get("origin_save_path")
+    result = doc.get("save_path")
+    heatmap = doc.get("heatmap_save_path")
+    defect_probability = doc.get("defect_probability")
+
+    # f_result.html의 막대그래프가 probability_percent를 반드시 쓰므로 없으면 복원 불가
+    if defect_probability is None:
+        abort(404)
+
+    # ⚠️ 아래 두 계산(URL 변환·확률 %)은 predict()의 169-181행과 같은 내용입니다.
+    #    팀 작업 충돌을 피하려고 predict()를 건드리지 않고 의도적으로 중복시켰습니다.
+    #    확률 표시 방식이나 경로 변환을 바꿀 때는 반드시 양쪽을 같이 고쳐 주세요.
+    #    나중에 정리할 여유가 생기면 아래 헬퍼를 살리고 양쪽 인라인 계산을
+    #    헬퍼 호출로 바꾸면 됩니다.
+    #
+    # def to_web_path(path):
+    #     """윈도우 물리 경로를 웹 URL로. 없으면 None."""
+    #     return f"/{path.replace('\\', '/')}" if path else None
+    #
+    # def to_probability_percent(defect_probability, is_defect):
+    #     """불량 확률 원값 → 판정된 클래스의 % 값."""
+    #     if defect_probability is None:
+    #         return None
+    #     return round((defect_probability if is_defect else 1 - defect_probability) * 100, 1)
+
+    is_defect = doc.get("status") == "불량"
+    if is_defect:
+        probability_percent = round(defect_probability * 100, 1)
+    else:
+        probability_percent = round((1 - defect_probability) * 100, 1)
+
+    return render_template(
+        'f_result.html',
+        user_image_url=f"/{origin.replace('\\', '/')}" if origin else "",
+        cam_image_url=f"/{result.replace('\\', '/')}" if result else "",
+        heatmap_image_url=f"/{heatmap.replace('\\', '/')}" if heatmap else None,
+        ai_result=doc.get("status", ""),
+        probability_percent=probability_percent,
+        peak_x=None,   # f_result.html이 쓰지 않아 DB에 저장하지 않는다
+        peak_y=None,
+        inference_ms=doc.get("inference_time_ms"),
+    )
+
 # ── 🆕 [진단 이력 기능] 여기까지 ────────────────────────────────────────
 
 if __name__ == '__main__':
