@@ -215,8 +215,9 @@ cd D:/hn_old-building/.claude/worktrees/mongodb-image-save-issue-8ac202/app && p
 8. `app/static/images/origin/`에서 파일 하나를 지운 뒤 목록 → 그 행만 X 썸네일
 9. DB에 `status: "오류"` 문서를 직접 넣고 → 목록에 X + "오류" 배지, 클릭 안 먹음
 
-**자동 테스트는 만들지 않는다.** 저장소에 테스트 하네스(pytest·requirements.txt·CI)가
-전혀 없다. 이 기능 하나를 위해 하네스를 새로 세우는 것은 범위를 넘는다.
+**자동 테스트는 만들지 않는다.** 저장소에 테스트 하네스가 없다 — pytest도, `conftest.py`도,
+CI 워크플로도 없다. (`requirements.txt`는 있지만 런타임 의존성만 담고 테스트 도구는 없다.)
+이 기능 하나를 위해 하네스를 새로 세우는 것은 범위를 넘는다.
 
 **라이브 서비스(192.168.0.22) 배포 후 별도 확인** — 개발 PC의 검증은 개발 PC 자체 DB
 기준이다. 배포 후 그쪽에서 1~3번을 한 번 더 확인한다.
