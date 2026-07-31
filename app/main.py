@@ -247,6 +247,37 @@ CLIENT_ID_COOKIE = "hn_client_id"     # 이력 식별용 쿠키 이름 (로그�
 CLIENT_ID_MAX_AGE = 60 * 60 * 24 * 2  # 2일. 이력도 사실상 이틀치가 된다
 HISTORY_LIMIT = 20                    # 목록에 띄우는 최대 건수
 
+@app.route('/history')
+def history_list():
+    """쿠키 주인의 최근 진단 20건을 JSON으로. 오류 건도 포함한다(프론트가 X로 표시)."""
+    client_id = request.cookies.get(CLIENT_ID_COOKIE)
+    if not client_id:
+        return jsonify({"items": []})
+
+    try:
+        cursor = (collection.find({"client_id": client_id})
+                  .sort("create_at", -1)
+                  .limit(HISTORY_LIMIT))
+
+        items = []
+        for doc in cursor:
+            origin = doc.get("origin_save_path")
+            created = doc.get("create_at")
+            items.append({
+                "id": str(doc["_id"]),
+                # 연도는 빼고 월/일 시:분만 (요구사항)
+                "date": created.strftime("%m/%d %H:%M") if created else "",
+                "status": doc.get("status", "오류"),
+                # 물리 경로(역슬래시)를 웹 URL로. 원본이 없는 구 레코드는 None
+                "thumb": f"/{origin.replace('\\', '/')}" if origin else None,
+            })
+        return jsonify({"items": items})
+
+    except Exception as history_err:
+        # DB 장애가 화면을 죽이지 않도록 격리 — insert_one과 같은 방침
+        print(f"❌ 이력 목록 조회 오류: {history_err}")
+        return jsonify({"items": []})
+
 # ── 🆕 [진단 이력 기능] 여기까지 ────────────────────────────────────────
 
 if __name__ == '__main__':
