@@ -339,4 +339,116 @@ document.addEventListener('DOMContentLoaded', () => {
         systemStatus.style.color = '#00f2fe';
         uploadText.innerHTML = `사진을 여기로 드래그하거나<br>클릭하여 업로드하세요<br><br>(50MB 이하, .png .jpg .jpeg .jfif 만 가능)<br>해상도 가로, 세로 1024 이하.<br>진단하고 싶은 하자가 정중앙에 위치한 사진 권장.`;
     }
+
+    // ── 🆕 [진단 이력 기능] 여기부터 추가 (2026-07-31) ──
+    // 좌측 진단 이력 사이드바. 상단 const 선언부를 건드리지 않으려고
+    // 필요한 요소를 이 블록 안에서 따로 잡는다 (팀 병합 충돌 최소화).
+    const historyToggle = document.getElementById('historyToggle');
+    const historySidebar = document.getElementById('historySidebar');
+    const historyScrim = document.getElementById('historyScrim');
+    const historyList = document.getElementById('historyList');
+
+    // status 문자열 → [배지 클래스, 표시 문구]
+    const HISTORY_BADGE = { '불량': ['bad', '불량'], '우수': ['good', '우수'], '오류': ['err', '오류'] };
+
+    function closeHistory() {
+        historySidebar.classList.remove('open');
+        historyScrim.classList.add('hide');
+    }
+
+    /** 썸네일 자리에 들어갈 회색 X 상자 */
+    function makeThumbX() {
+        const box = document.createElement('div');
+        box.className = 'history-thumb-x';
+        box.textContent = '✕';
+        return box;
+    }
+
+    function renderHistory(items) {
+        historyList.innerHTML = '';
+
+        if (!items.length) {
+            const empty = document.createElement('li');
+            empty.className = 'history-empty';
+            empty.textContent = '아직 진단 이력이 없습니다.';
+            historyList.appendChild(empty);
+            return;
+        }
+
+        items.forEach(item => {
+            const isError = item.status === '오류';
+            const row = document.createElement('li');
+            row.className = 'history-item' + (isError ? ' is-error' : '');
+
+            if (isError || !item.thumb) {
+                row.appendChild(makeThumbX());
+            } else {
+                const thumb = document.createElement('img');
+                thumb.className = 'history-thumb';
+                thumb.src = item.thumb;
+                thumb.alt = '';
+                // 서버에서 파일이 지워졌으면 X 상자로 갈아끼우고 클릭도 막는다
+                thumb.addEventListener('error', () => {
+                    thumb.replaceWith(makeThumbX());
+                    row.classList.add('is-error');
+                }, { once: true });
+                row.appendChild(thumb);
+            }
+
+            const date = document.createElement('span');
+            date.className = 'history-date';
+            date.textContent = item.date;
+            row.appendChild(date);
+
+            const badge = document.createElement('span');
+            const badgeSpec = HISTORY_BADGE[item.status] || HISTORY_BADGE['오류'];
+            badge.className = 'history-badge ' + badgeSpec[0];
+            badge.textContent = badgeSpec[1];
+            row.appendChild(badge);
+
+            if (!isError) {
+                row.addEventListener('click', () => restoreFromHistory(item.id));
+            }
+            historyList.appendChild(row);
+        });
+    }
+
+    function openHistory() {
+        historySidebar.classList.add('open');
+        historyScrim.classList.remove('hide');
+        // 열 때마다 새로 받는다 — 방금 끝낸 진단이 바로 목록에 보인다
+        fetch('/history')
+            .then(res => res.json())
+            .then(data => renderHistory(data.items || []))
+            .catch(() => renderHistory([]));
+    }
+
+    /** 저장된 진단 1건을 화면에 되살린다.
+     *  서버가 /predict와 똑같은 조각을 주므로 기존 injectBackendResult()를 그대로 쓴다
+     *  — 슬라이더·레이어 탭·fitCompareWrap()이 거기서 전부 세팅된다. */
+    function restoreFromHistory(id) {
+        fetch('/history/' + id)
+            .then(res => {
+                if (!res.ok) throw new Error('이력을 불러오지 못했습니다. 이미지가 삭제되었을 수 있습니다.');
+                return res.text();
+            })
+            .then(htmlResult => {
+                closeHistory();
+                // btnDiagnose 클릭 핸들러(script.js:195-201)와 같은 화면 전환
+                uploadZone.classList.add('hide');
+                logZone.classList.remove('hide');
+                laserLine.classList.add('hide');
+                progressBar.style.width = '100%';
+                progressText.textContent = '[ANALYZING... 100%]';
+                injectBackendResult(htmlResult);
+            })
+            .catch(err => alert(err.message));
+    }
+
+    historyToggle.addEventListener('click', () => {
+        if (historySidebar.classList.contains('open')) closeHistory();
+        else openHistory();
+    });
+    historyScrim.addEventListener('click', closeHistory);
+    // ── 🆕 [진단 이력 기능] 여기까지 ──
 });
