@@ -56,7 +56,10 @@
   이 세 필드가 없는 구 레코드는 이력 목록에 뜨지 않는다.
   ⚠️ MongoDB가 죽으면 `MongoClient`의 기본 `serverSelectionTimeoutMS`(30초) 때문에 `/history`와 `insert_one`이
   30초씩 블로킹된 뒤에야 넘어간다. 고치려면 `main.py:49`에 `serverSelectionTimeoutMS`를 주면 된다.
-- **배포 위치**: 웹서비스는 별도 PC(192.168.0.22)에서 구동된다. DB도 그쪽 localhost라 개발 PC에서는 종단 검증 불가.
+- **배포 위치**: 라이브 웹서비스는 별도 PC(192.168.0.22)에서 구동되고, 그쪽 MongoDB는 방화벽 뒤라
+  개발 PC에서 **라이브 데이터**를 볼 수는 없다. 다만 **개발 PC 자체로는 종단 검증이 된다** —
+  모델 가중치·로컬 MongoDB·flask/pymongo/torch가 모두 갖춰져 있다 (2026-07-31 확인).
+  `cd app && python main.py` 로 띄워 로컬 DB 기준으로 확인하면 된다.
 
 ---
 
