@@ -51,7 +51,7 @@
 ### 외부 의존
 
 - **모델 가중치**: `model/*.pth`는 `.gitignore` 대상이라 저장소에 없다. 서빙 PC에 파일이 실제로 있어야 기동된다.
-- **MongoDB**: DB `apartment_inspection_db`, 컬렉션 `inspection_logs`. 저장 실패해도 화면 출력은 계속되도록 try/except로 격리돼 있다 (`main.py:208-212`).
+- **MongoDB**: DB `apartment_inspection_db`, 컬렉션 `inspection_logs`. 저장 실패해도 화면 출력은 계속되도록 try/except로 격리돼 있다 (`main.py:215-219`).
   이력 기능용으로 `client_id`(쿠키 `hn_client_id`, 2일), `origin_file_name`, `origin_save_path`가 함께 저장된다.
   이 세 필드가 없는 구 레코드는 이력 목록에 뜨지 않는다.
   ⚠️ MongoDB가 죽으면 `MongoClient`의 기본 `serverSelectionTimeoutMS`(30초) 때문에 `/history`와 `insert_one`이
@@ -162,5 +162,5 @@ md가 아닌 참고 자료: `docs/EfficientNet_사용설명서.pdf`, `docs/resne
 | 라우트 추가/업로드 제한 변경 | `app/main.py` |
 | 판정 임계값·전처리 변경 | `app/ai_engine.py` |
 | 박스/히트맵 그리는 방식 변경 | `app/cv_processor.py` |
-| DB 스키마 변경 | `app/main.py`의 `log_document` (191~206행) |
+| DB 스키마 변경 | `app/main.py`의 `log_document` (195~213행) |
 | 모델 재학습 | `src/v3/` |
