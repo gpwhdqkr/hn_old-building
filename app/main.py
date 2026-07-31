@@ -216,7 +216,7 @@ def predict():
         return ('<script>alert("진단 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");'
             ' window.location.href = "/";</script>')
 
-    # 프론트 연동 5종 출력 — 변수 설명은 app/FRONTEND_GUIDE.md 참고
+    # 프론트 연동 6종 출력 — 변수 설명은 docs/FRONTEND_GUIDE.md 참고
     return render_template(
         'f_result.html',
         # -- 기존 변수 (하위 호환 유지) --
