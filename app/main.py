@@ -279,12 +279,14 @@ def history_detail(item_id):
         peak_x=None,   # f_result.html이 쓰지 않아 DB에 저장하지 않는다
         peak_y=None,
         inference_ms=doc.get("inference_time_ms"),
+         # 🌟 [이 줄을 무조건 추가] AI가 계산한 날것 그대로의 불량률 소수점을 화면에 숨겨서 보냅니다.
+        raw_defect_probability=defect_probability
     )
 
 # ── 🆕 [진단 이력 기능] 여기까지 ────────────────────────────────────────
 
 # =========================================================================
-# 📄 [초고속 버그 픽스 완료] 정식 효력을 갖춘 AI 외벽 진단 PDF 다운로드 엔진
+# 📄 [완벽 정제] 덮어쓰기 버그 박멸 및 수학적 확률 가드 완결판 라우터
 # =========================================================================
 @app.route('/api/download-report')
 def download_report():
@@ -308,7 +310,7 @@ def download_report():
     else:
         font_name = "Helvetica"
 
-    # 파라미터 수령 (중복 제거 청정 규격)
+      # 1. 프론트엔드가 수집하여 보낸 고유 파라미터 수령
     user_image_url = request.args.get('user_image', '')
     cam_image_url = request.args.get('cam_image', '')
     heatmap_image_url = request.args.get('heatmap_image', '')
@@ -316,12 +318,19 @@ def download_report():
     inference_ms = request.args.get('inference_ms', '0')
     raw_prob_str = request.args.get('raw_prob', '0.999')
 
+    # 🌟 [신뢰도 가드] 주입 단계에서 넘어온 문자열을 실수형(Float)으로 완벽하게 형변환
     try:
         defect_prob = float(raw_prob_str)
     except ValueError:
-        defect_prob = 0.999
+        defect_prob = 0.999  # 예외 가드 기본값
 
-    ai_result = "불량" if "DEFECT" in ai_result_raw or "불량" in ai_result_raw else "우수"
+    # 대소문자 및 URL 인코딩 파편 방어 가드 적용
+    ai_result_upper = ai_result_raw.upper()
+    if "DEFECT" in ai_result_upper or "불량" in ai_result_upper:
+        ai_result = "불량"
+    else:
+        ai_result = "우수"
+
     origin_path = user_image_url.lstrip('/')
     bbox_path = cam_image_url.lstrip('/')
     heatmap_path = heatmap_image_url.lstrip('/') if heatmap_image_url else None
@@ -344,15 +353,27 @@ def download_report():
     story.append(Paragraph("<b>AI 노후 건물 외벽 진단 시스템 판정 보고서</b>", title_style))
     story.append(Spacer(1, 10))
 
-    # 🌟 [3번 연산 파이프라인 완벽 안착] 하드코딩 철폐 및 리얼 데이터 수학적 계산식 적용
-    real_excellent_percent = round((1.0 - defect_prob) * 100, 1)
-    real_defect_percent = round(defect_prob * 100, 1)
+     # =========================================================================
+    # 🌟 [최종 완결] 원문 문구 100% 유지 및 수치 기반 강제 동기화 라우터
+    # =========================================================================
+    # 소프트맥스 확률 분포를 1:1로 대조 연산하여 리얼 데이터 도출
+    real_excellent_percent = (1.0 - defect_prob) * 100
+    real_defect_percent = defect_prob * 100
+    
+    # 순수 연산식 매핑 포맷 적용
     probability_display = f"우수 {real_excellent_percent}%, 불량 {real_defect_percent}%"
+
+    # 🌟 [버그 박멸 핵심] 문자열 필터 파편에 방해받지 않도록, 
+    # 실제 불량 확률이 50% 이상이면 ai_result를 "불량"으로 완벽히 강제 고정합니다.
+    if real_defect_percent >= 50.0:
+        ai_result = "불량"
+    else:
+        ai_result = "우수"
 
     meta_widths = [90, 180, 90, 180]
     meta_data = [
         [Paragraph("<b>사진 고유 ID</b>", body_style), Paragraph(photo_id, id_style), Paragraph("<b>진단 일시</b>", body_style), Paragraph(datetime.now().strftime("%Y. %m. %d %H:%M:%S"), body_style)],
-        [Paragraph("<b>순수 추론 속도</b>", body_style), Paragraph(f"{inference_ms} ms", body_style), Paragraph("<b>AI 판정</b>", body_style), Paragraph(probability_display, body_style)]
+        [Paragraph("<b>순수 추론 속도</b>", body_style), Paragraph(f"{inference_ms} ms", body_style), Paragraph("<b>AI 판정 확률</b>", body_style), Paragraph(probability_display, body_style)]
     ]
     meta_table = Table(meta_data, colWidths=meta_widths)
     meta_table.setStyle(TableStyle([
@@ -364,6 +385,8 @@ def download_report():
     story.append(Spacer(1, 15))
 
     story.append(Paragraph("<b>■ 종합 판정 결과</b>", section_title))
+    
+    # 🌟 원본 요구 명세 문구를 토시 하나 바꾸지 않고 100% 유지하여 조건부 분기합니다.
     if ai_result == "불량":
         result_color = "#e11d48"
         result_text = f"<b>[불량] - 구조적 하자가 감지되었습니다. (AI 불량 판단 지표: {real_defect_percent}%)</b>"

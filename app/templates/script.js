@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             compareWrap.classList.add('hide');
             layerTabs.classList.add('hide');
             gridBg.classList.add('hide');
-            systemStatus.textContent = '[READY TO SCAN]';
+            systemStatus.textContent = '';
             systemStatus.style.color = '#10b981';
             uploadText.innerHTML = `<strong>${fileName}</strong><br>스캔 준비 완료`;
             btnDiagnose.removeAttribute('disabled');
@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadZone.classList.add('hide');
         logZone.classList.remove('hide');
         laserLine.classList.remove('hide');
-        systemStatus.textContent = '[RUNNING MODEL INFERENCE...]';
+        systemStatus.textContent = '';
         systemStatus.style.color = '#38bdf8';
 
         const payload = new FormData();
@@ -323,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (finalStatus && finalStatus.includes("불량")) {
             if (systemStatus) {
-                systemStatus.textContent = '[DIAGNOSIS COMPLETE: DEFECT DETECTED]';
+                systemStatus.textContent = '';
                 systemStatus.style.color = '#ef4444';
             }
         } else {
@@ -405,7 +405,7 @@ if (btnHeaderDownload) {
         btnDiagnose.setAttribute('disabled', 'true');
         btnDiagnose.classList.remove('active');
         btnDiagnose.textContent = '진단 시작';
-        systemStatus.textContent = '[SYSTEM READY: AWAITING INPUT]';
+        systemStatus.textContent = '';
         systemStatus.style.color = '#00f2fe';
         uploadText.innerHTML = `사진을 여기로 드래그하거나<br>클릭하여 업로드하세요<br><br>(50MB 이하, .png .jpg .jpeg .jfif 만 가능)<br>해상도 가로, 세로 1024 이하.<br>진단하고 싶은 하자가 정중앙에 위치한 사진 권장.`;
     
