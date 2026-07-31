@@ -321,51 +321,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        if (finalStatus && finalStatus.includes("불량")) {
-            if (systemStatus) {
-                systemStatus.textContent = '';
-                systemStatus.style.color = '#ef4444';
-            }
-        } else {
-            if (systemStatus) {
-                systemStatus.textContent = '[DIAGNOSIS COMPLETE: SECURE]';
-                systemStatus.style.color = '#10b981';
-            }
+        // 상태 문구는 표시하지 않는다 (판정은 결과 카드가 보여준다).
+        // 판정값이 필요하면 #backendUrls의 data-status를 쓸 것 — 이 엘리먼트는 항상 비어 있다.
+        if (systemStatus) {
+            systemStatus.textContent = '';
+            systemStatus.style.color = (finalStatus && finalStatus.includes("불량")) ? '#ef4444' : '#10b981';
         }
 
-   // [injectBackendResult 함수 내부 최하단부의 버튼 연동 블록 수정]
-const btnHeaderDownload = document.getElementById('btnHeaderDownload');
-if (btnHeaderDownload) {
-    // 1. 숨겨져 있던 우측 상단 헤더 내 다운로드 스위치 전면 노출
-    btnHeaderDownload.classList.remove('hide');
-    
-    // 2. 클릭 즉시 중간 불필요 팝업 없이 다이렉트로 다운로드 스트림 호출
-    btnHeaderDownload.onclick = function() {
-        // 백엔드가 결과 페이지 렌더링 시 주입한 HTML 엘리먼트 및 변수 데이터 수집
-        const metaPipe = document.getElementById('backendUrls');
-        
-        // 렌더링된 속성값 수동 추적
-        const userImg = metaPipe ? metaPipe.getAttribute('data-origin') : '';
-        const camImg = metaPipe ? metaPipe.getAttribute('data-result') : '';
-        const heatmapImg = metaPipe ? metaPipe.getAttribute('data-heatmap') : '';
-        const aiResultText = document.querySelector('.system-status') ? document.querySelector('.system-status').textContent : '불량';
-        
-        // 데이터 수치 확보 (스크린 엘리먼트 파싱 예외 처리 가드 포함)
-        const probPercent = window.probability_percent || "99.9"; 
-        const infMs = window.inference_ms || "1637";
-
-        // 3. 쿼리 파라미터를 동적으로 빌드하여 데이터 파이프라인 최종 전송
-        const downloadUrl = `/api/download-report?user_image=${encodeURIComponent(userImg)}` +
-                            `&cam_image=${encodeURIComponent(camImg)}` +
-                            `&heatmap_image=${encodeURIComponent(heatmapImg || '')}` +
-                            `&ai_result=${encodeURIComponent(aiResultText)}` +
-                            `&probability_percent=${encodeURIComponent(probPercent)}` +
-                            `&inference_ms=${encodeURIComponent(infMs)}`;
-
-        // 브라우저 파일 수령 핸들러 작동 (화면 전환 없이 파일만 다운로드 다운)
-        window.location.href = downloadUrl;
-    };
-}
+   // 숨겨져 있던 우측 상단 헤더 내 다운로드 스위치 전면 노출
+   // (클릭 핸들러는 DOMContentLoaded 블록에서 단 한 번만 결합한다. 여기서 다시 onclick을
+   //  대입하면 raw_prob을 실어보내는 그 핸들러를 덮어써서 PDF가 전부 불량으로 나온다)
+   const btnHeaderDownload = document.getElementById('btnHeaderDownload');
+   if (btnHeaderDownload) {
+       btnHeaderDownload.classList.remove('hide');
+   }
 
     isFinished = true;
     if (btnDiagnose) {
@@ -561,17 +530,17 @@ if (btnHeaderDownload) {
     }
    
 
-    document.addEventListener('DOMContentLoaded', () => {
-      // =========================================================================
-    // 📄 [완벽 교정] 문법 오류 원천 제거 및 실시간 데이터 다운로드 파이프라인
     // =========================================================================
-    
-    // 1. 변수 안전 바인딩 확인
-    const btnHeaderDownload = document.getElementById('btnHeaderDownload');
-    const systemStatus = document.getElementById('systemStatus');
+    // 📄 실시간 데이터 다운로드 파이프라인
+    // =========================================================================
+    // 이 블록은 예전에 DOMContentLoaded 리스너로 한 번 더 감싸여 있었다. 이 파일 전체가
+    // 이미 DOMContentLoaded 콜백 안이라, 그 시점에 추가한 리스너는 지금 진행 중인
+    // 디스패치에서 호출되지 않는다 → 핸들러가 아예 결합되지 않았다. 래퍼를 걷어냈다.
 
-    // 2. 백엔드 통신 엔진(injectBackendResult) 내부 다운로드 스위치 동적 결합
-    // 기존에 에러가 나던 텍스트 파편과 구형 모의 함수를 걷어내고 실무 연동형으로 교정 완료했습니다.
+    // 1. 변수 안전 바인딩 확인 (systemStatus는 위에서 이미 잡아둔 것을 쓴다)
+    const btnHeaderDownload = document.getElementById('btnHeaderDownload');
+
+    // 2. 다운로드 스위치 클릭 핸들러 결합 (버튼의 hide 해제는 injectBackendResult가 담당)
     if (btnHeaderDownload) {
         // 백엔드 연산 완료 타이밍에 맞춰 버튼의 'hide' 클래스를 제거하는 제어권 통합
         // (현재 injectBackendResult 함수 내부에서 remove('hide')를 호출하므로, 
@@ -581,12 +550,17 @@ if (btnHeaderDownload) {
             const metaPipe = document.getElementById('backendUrls');
             
             // 화면 텍스트 대신, 백엔드 모델이 계산해서 숨겨놓은 실제 불량 확률 원값(소수점) 추적
-            const rawDefectProb = metaPipe ? metaPipe.getAttribute('data-prob') : '0.999';
+            // (없으면 빈 문자열. 여기서 임의값을 채우면 그 값이 그대로 보고서 확률이 된다)
+            const rawDefectProb = metaPipe ? (metaPipe.getAttribute('data-prob') || '') : '';
+            // 보고서에 찍을 원본 파일명 (없으면 백엔드가 UUID로 대체 표기)
+            const originName = metaPipe ? (metaPipe.getAttribute('data-name') || '') : '';
             const userImg = metaPipe ? metaPipe.getAttribute('data-origin') : '';
             const camImg = metaPipe ? metaPipe.getAttribute('data-result') : '';
             const heatmapImg = metaPipe ? metaPipe.getAttribute('data-heatmap') : '';
-            
-            const aiResultText = systemStatus ? systemStatus.textContent : '불량';
+
+            // 판정은 data-status(백엔드 result_status "우수"/"불량")를 쓴다.
+            // systemStatus.textContent는 불량일 때 빈 문자열이라 우수로 오독된다.
+            const aiResultText = metaPipe ? (metaPipe.getAttribute('data-status') || '') : '';
             
             // 전역 스코프에 바인딩된 밀리초 변수 안전 추출 가드
             const infMs = window.inference_ms || "1637";
@@ -597,13 +571,10 @@ if (btnHeaderDownload) {
                                 `&heatmap_image=${encodeURIComponent(heatmapImg || '')}` +
                                 `&ai_result=${encodeURIComponent(aiResultText)}` +
                                 `&raw_prob=${encodeURIComponent(rawDefectProb)}` +
+                                `&origin_name=${encodeURIComponent(originName)}` +
                                 `&inference_ms=${encodeURIComponent(infMs)}`;
 
-   // ... 기존 코드(btnHeaderDownload.onclick 등)가 모두 끝나는 파일 맨 마지막 지점 ...
             window.location.href = downloadUrl;
         };
     }
-
-    //  [이 아래의 2줄을 파일 맨 마지막에 추가하고 저장하세요]
-});
 });

@@ -49,4 +49,6 @@
 
 <!-- 🔒 [주소 추출 파이프 보정] main.py가 전달한 절대경로 주소를 정 가공 없이 안전하게 홀딩하도록 수정 완료 -->
 <!-- [추가] data-heatmap은 불량 판정에서만 채워진다 (우수/에러는 빈 문자열 → 프론트가 히트맵 탭을 숨김) -->
-<div id="backendUrls" data-origin="{{ user_image_url }}" data-result="{{ cam_image_url }}" data-heatmap="{{ heatmap_image_url or '' }}" data-status="{{ ai_result }}" class="hide"></div>
+<!-- [추가] data-prob은 모델이 낸 불량 확률 원값(0~1). PDF 보고서가 이 값으로 % 를 계산한다 -->
+<!-- [추가] data-name은 사용자가 올린 원본 파일명(확장자 포함). 보고서에 그대로 찍힌다 -->
+<div id="backendUrls" data-origin="{{ user_image_url }}" data-result="{{ cam_image_url }}" data-heatmap="{{ heatmap_image_url or '' }}" data-status="{{ ai_result }}" data-prob="{{ raw_defect_probability if raw_defect_probability is not none else '' }}" data-name="{{ origin_display_name or '' }}" class="hide"></div>

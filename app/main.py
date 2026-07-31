@@ -3,6 +3,7 @@ import uuid
 import threading
 from datetime import datetime
 from pathlib import Path
+from xml.sax.saxutils import escape as xml_escape
 from flask import Flask, render_template, request, send_from_directory, send_file, make_response, jsonify, abort  # 🆕 [진단 이력 기능] make_response, jsonify, abort 추가 (2026-07-31)
 import torch
 import cv2
@@ -49,6 +50,20 @@ def home():
     return resp                                                                 # 🆕 [진단 이력 기능] 수정된 줄
 
 
+def sanitize_origin_name(raw_name):
+    """업로드된 원본 파일명을 표시용으로 정리한다 (확장자 유지).
+
+    파일은 UUID 이름으로 저장하므로(아래 unique_filename) 이 값은 화면·보고서
+    표시 전용이다. 일부 브라우저가 전체 경로를 보내므로 basename만 취하고,
+    제어문자를 걷어낸 뒤 길이를 제한한다. 쓸 게 없으면 빈 문자열.
+    """
+    if not raw_name:
+        return ""
+    name = str(raw_name).replace('\\', '/').split('/')[-1]
+    name = "".join(ch for ch in name if ch.isprintable()).strip()
+    return name[:255]
+
+
 @app.route('/predict', methods=['POST'])
 def predict():
     uploaded_file = request.files.get('house_image')
@@ -76,6 +91,8 @@ def predict():
     os.makedirs(origin_dir, exist_ok=True)
     os.makedirs(result_dir, exist_ok=True)
 
+    # 저장은 UUID로 하되(충돌·경로조작 방지), 사용자가 올린 이름은 표시용으로 따로 남긴다.
+    origin_display_name = sanitize_origin_name(uploaded_file.filename)
     unique_filename = f"{uuid.uuid4().hex}{save_extension}"
     file_path = os.path.join(origin_dir, unique_filename)
     uploaded_file.save(file_path)
@@ -144,6 +161,9 @@ def predict():
         "origin_id": ObjectId(),
         "client_id": request.cookies.get(CLIENT_ID_COOKIE),  # 🆕 [진단 이력 기능] 추가된 줄 (2026-07-31)
         "origin_file_name": unique_filename,                 # 🆕 [진단 이력 기능] 추가된 줄 (2026-07-31)
+        # ⚠️ 위 origin_file_name은 이름과 달리 UUID 저장명이다. 사용자가 올린 실제
+        #    파일명(확장자 포함)은 아래 origin_display_name에 들어간다.
+        "origin_display_name": origin_display_name,
         "origin_save_path": file_path,                       # 🆕 [진단 이력 기능] 추가된 줄 (2026-07-31)
         "result_file_name": result_file_name,
         "save_path": display_image_path,
@@ -176,7 +196,11 @@ def predict():
         ai_result=result_status,
         probability_percent=probability_percent,
         peak_x=peak_x, peak_y=peak_y,
-        inference_ms=inference_time_ms
+        inference_ms=inference_time_ms,
+        # PDF 보고서가 쓰는 날것 그대로의 불량 확률 소수점 (f_result.html의 data-prob으로 나간다)
+        raw_defect_probability=defect_probability,
+        # 보고서에 찍을 원본 파일명 (f_result.html의 data-name으로 나간다)
+        origin_display_name=origin_display_name
     )
 
 # =========================================================================
@@ -280,7 +304,9 @@ def history_detail(item_id):
         peak_y=None,
         inference_ms=doc.get("inference_time_ms"),
          # 🌟 [이 줄을 무조건 추가] AI가 계산한 날것 그대로의 불량률 소수점을 화면에 숨겨서 보냅니다.
-        raw_defect_probability=defect_probability
+        raw_defect_probability=defect_probability,
+        # 이 필드가 없던 시절의 구 레코드는 빈 값 → 보고서가 UUID로 대체 표기한다
+        origin_display_name=doc.get("origin_display_name") or ""
     )
 
 # ── 🆕 [진단 이력 기능] 여기까지 ────────────────────────────────────────
@@ -316,13 +342,18 @@ def download_report():
     heatmap_image_url = request.args.get('heatmap_image', '')
     ai_result_raw = request.args.get('ai_result', '우수')
     inference_ms = request.args.get('inference_ms', '0')
-    raw_prob_str = request.args.get('raw_prob', '0.999')
+    raw_prob_str = request.args.get('raw_prob', '')
+    origin_name = sanitize_origin_name(request.args.get('origin_name', ''))
 
-    # 🌟 [신뢰도 가드] 주입 단계에서 넘어온 문자열을 실수형(Float)으로 완벽하게 형변환
+    # 🌟 [신뢰도 가드] 주입 단계에서 넘어온 문자열을 실수형(Float)으로 형변환한다.
+    # 값이 없거나 깨졌을 때 임의 기본값(구 0.999)을 채우면 모든 보고서가 99.9% 불량으로
+    # 나온다. 그래서 실패하면 None으로 두고, 판정은 아래에서 ai_result에만 맡긴다.
     try:
         defect_prob = float(raw_prob_str)
-    except ValueError:
-        defect_prob = 0.999  # 예외 가드 기본값
+    except (TypeError, ValueError):
+        defect_prob = None
+    if defect_prob is not None and not 0.0 <= defect_prob <= 1.0:
+        defect_prob = None
 
     # 대소문자 및 URL 인코딩 파편 방어 가드 적용
     ai_result_upper = ai_result_raw.upper()
@@ -335,8 +366,18 @@ def download_report():
     bbox_path = cam_image_url.lstrip('/')
     heatmap_path = heatmap_image_url.lstrip('/') if heatmap_image_url else None
 
+    # 사용자가 올린 원본 파일명을 확장자까지 그대로 찍는다.
+    # 이 값이 없는 건(구 이력 레코드 등)은 예전처럼 UUID 저장명으로 대체한다.
     photo_filename = os.path.basename(origin_path)
-    photo_id = os.path.splitext(photo_filename)[0].upper()
+    photo_id = origin_name or os.path.splitext(photo_filename)[0].upper()
+
+    # 셀 폭(180pt)을 넘기면 표가 세로로 늘어지므로 확장자를 남기고 줄인다
+    if len(photo_id) > 52:
+        _stem, _ext = os.path.splitext(photo_id)
+        photo_id = f"{_stem[:max(1, 52 - len(_ext) - 1)]}…{_ext}"
+
+    # Paragraph는 마크업을 파싱하므로 &, <, > 가 든 파일명은 이스케이프해야 한다
+    photo_id = xml_escape(photo_id)
 
     os.makedirs('generated', exist_ok=True)
     pdf_path = "generated/exterior_wall_diagnosis_report.pdf"
@@ -357,22 +398,27 @@ def download_report():
     # 🌟 [최종 완결] 원문 문구 100% 유지 및 수치 기반 강제 동기화 라우터
     # =========================================================================
     # 소프트맥스 확률 분포를 1:1로 대조 연산하여 리얼 데이터 도출
-    real_excellent_percent = (1.0 - defect_prob) * 100
-    real_defect_percent = defect_prob * 100
-    
-    # 순수 연산식 매핑 포맷 적용
-    probability_display = f"우수 {real_excellent_percent}%, 불량 {real_defect_percent}%"
-
-    # 🌟 [버그 박멸 핵심] 문자열 필터 파편에 방해받지 않도록, 
-    # 실제 불량 확률이 50% 이상이면 ai_result를 "불량"으로 완벽히 강제 고정합니다.
-    if real_defect_percent >= 50.0:
-        ai_result = "불량"
+    # 확률 원값이 유실된 경우에는 수치를 지어내지 않고 "확률 정보 없음"으로 표기한다.
+    if defect_prob is not None:
+        real_excellent_percent = round((1.0 - defect_prob) * 100, 1)
+        real_defect_percent = round(defect_prob * 100, 1)
+        probability_display = f"우수 {real_excellent_percent}%, 불량 {real_defect_percent}%"
+        defect_indicator = f"{real_defect_percent}%"
+        excellent_indicator = f"{real_excellent_percent}%"
     else:
-        ai_result = "우수"
+        real_excellent_percent = None
+        real_defect_percent = None
+        probability_display = "확률 정보 없음"
+        defect_indicator = "확률 정보 없음"
+        excellent_indicator = "확률 정보 없음"
+
+    # 우수/불량 판정은 ai_engine이 운영 임계값(self.threshold)으로 이미 내린 결론이
+    # ai_result로 넘어온 것이다. 여기서 50% 기준으로 다시 판정하면 운영 임계값과
+    # 어긋나므로 재판정하지 않는다.
 
     meta_widths = [90, 180, 90, 180]
     meta_data = [
-        [Paragraph("<b>사진 고유 ID</b>", body_style), Paragraph(photo_id, id_style), Paragraph("<b>진단 일시</b>", body_style), Paragraph(datetime.now().strftime("%Y. %m. %d %H:%M:%S"), body_style)],
+        [Paragraph("<b>원본 파일명</b>", body_style), Paragraph(photo_id, id_style), Paragraph("<b>진단 일시</b>", body_style), Paragraph(datetime.now().strftime("%Y. %m. %d %H:%M:%S"), body_style)],
         [Paragraph("<b>순수 추론 속도</b>", body_style), Paragraph(f"{inference_ms} ms", body_style), Paragraph("<b>AI 판정 확률</b>", body_style), Paragraph(probability_display, body_style)]
     ]
     meta_table = Table(meta_data, colWidths=meta_widths)
@@ -389,14 +435,14 @@ def download_report():
     # 🌟 원본 요구 명세 문구를 토시 하나 바꾸지 않고 100% 유지하여 조건부 분기합니다.
     if ai_result == "불량":
         result_color = "#e11d48"
-        result_text = f"<b>[불량] - 구조적 하자가 감지되었습니다. (AI 불량 판단 지표: {real_defect_percent}%)</b>"
-        detail_desc = (f"외벽 레이어 내에서 불량 확률 {real_defect_percent}%의 연산치로 "
+        result_text = f"<b>[불량] - 구조적 하자가 감지되었습니다. (AI 불량 판단 지표: {defect_indicator})</b>"
+        detail_desc = (f"외벽 레이어 내에서 불량 확률 {defect_indicator}의 연산치로 "
                        f"외관 손상 및 결함 요인이 감지되었습니다. 다만, 본 판정 결과는 인공지능의 판단이므로 "
                        f"안전을 위해 반드시 건축구조 전문가의 현장 정밀 육안 진단과 소견이 필요합니다.")
     else:
         result_color = "#10b981"
-        result_text = f"<b>[우수] - 건축물 외벽 상태가 안정적인 수준으로 확인되었습니다. (AI 우수 판단 지표: {real_excellent_percent}%)</b>"
-        detail_desc = (f"외벽 레이어 내에서 우수 확률 {real_excellent_percent}%의 안전율로 하자요인이 검지되지 않았습니다. "
+        result_text = f"<b>[우수] - 건축물 외벽 상태가 안정적인 수준으로 확인되었습니다. (AI 우수 판단 지표: {excellent_indicator})</b>"
+        detail_desc = (f"외벽 레이어 내에서 우수 확률 {excellent_indicator}의 안전율로 하자요인이 검지되지 않았습니다. "
                        f"현재 외벽의 상태가 안정적인 수준으로 유지되고 있는 것으로 판정됩니다. 다만, 보다 정밀한 안전성 확보를 위해 "
                        f"건축구조 전문가의 현장 정밀 육안 점검 및 일상 관리를 병행하는 것을 권장합니다.")
 
@@ -413,12 +459,14 @@ def download_report():
     story.append(status_table)
     story.append(Spacer(1, 15))
 
-    story.append(Paragraph("<b>■ 컴퓨터 비전 증거 자료 (3-Layer Analysis)</b>", section_title))
-    max_cell_w, max_cell_h = 172, 130
-    img_widths = [180, 180, 180]
+    # 불량은 3열(원본·히트맵·B-Box), 우수는 2열이다.
+    # 우수의 ②·③은 같은 도장 이미지를 두 번 싣던 중복이라 ③ 상태 각인을 걷어냈다.
+    story.append(Paragraph(
+        "<b>■ 컴퓨터 비전 증거 자료 (3-Layer Analysis)</b>" if ai_result == "불량"
+        else "<b>■ 컴퓨터 비전 증거 자료 (2-Layer Analysis)</b>", section_title))
 
     # Pillow 정보 구조만 가볍게 파싱하여 연산 지연 속도를 0.001초 미만으로 차단
-    def _get_ratio_preserved_image(img_path):
+    def _get_ratio_preserved_image(img_path, max_cell_w=172, max_cell_h=130):
         if not img_path or not os.path.exists(img_path):
             return Paragraph("<font color='#94a3b8'>[데이터 누락]</font>", body_style)
         try:
@@ -434,21 +482,27 @@ def download_report():
         except Exception:
             return Image(img_path, width=max_cell_w, height=max_cell_h)
 
-    img_orig = _get_ratio_preserved_image(origin_path)
-    if heatmap_path and os.path.exists(heatmap_path):
-        img_heat = _get_ratio_preserved_image(heatmap_path)
-    elif os.path.exists(bbox_path) and ai_result == "우수":
-        img_heat = _get_ratio_preserved_image(bbox_path)
+    if ai_result == "불량":
+        img_widths = [180, 180, 180]
+        if heatmap_path and os.path.exists(heatmap_path):
+            img_heat = _get_ratio_preserved_image(heatmap_path)
+        else:
+            img_heat = Paragraph("<font color='#94a3b8'>[LayerCAM 미기동<br/>(우수 상태)]</font>", body_style)
+        img_data = [
+            [_get_ratio_preserved_image(origin_path), img_heat, _get_ratio_preserved_image(bbox_path)],
+            [Paragraph("<b>① 원본 파일 (Before)</b>", body_style),
+             Paragraph("<b>② 히트맵 분포 (Heatmap)</b>", body_style),
+             Paragraph("<b>③ 결함 바운딩 (B-Box)</b>", body_style)]
+        ]
     else:
-        img_heat = Paragraph("<font color='#94a3b8'>[LayerCAM 미기동<br/>(우수 상태)]</font>", body_style)
-    img_bbox = _get_ratio_preserved_image(bbox_path)
-
-    img_data = [
-        [img_orig, img_heat, img_bbox],
-        [Paragraph("<b>① 원본 파일 (Before)</b>", body_style), 
-         Paragraph("<b>② 히트맵 분포 (Heatmap)</b>", body_style) if ai_result == "불량" else Paragraph("<b>② 우수 인증 (Excellent)</b>", body_style), 
-         Paragraph("<b>③ 결함 바운딩 (B-Box)</b>", body_style) if ai_result == "불량" else Paragraph("<b>③ 상태 각인 (Stamped)</b>", body_style)]
-    ]
+        # 2열이라 셀이 넓어진 만큼 이미지도 키운다 (표 전체 폭은 위 판정표와 같은 540)
+        img_widths = [270, 270]
+        img_data = [
+            [_get_ratio_preserved_image(origin_path, 260, 190),
+             _get_ratio_preserved_image(bbox_path, 260, 190)],
+            [Paragraph("<b>① 원본 파일 (Before)</b>", body_style),
+             Paragraph("<b>② 우수 인증 (Excellent)</b>", body_style)]
+        ]
     img_table = Table(img_data, colWidths=img_widths)
     img_table.setStyle(TableStyle([
         ('ALIGN', (0,0), (-1,-1), 'CENTER'), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
