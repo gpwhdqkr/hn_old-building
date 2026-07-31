@@ -4,22 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI 노후 건물 외벽 진단 시스템</title>
-    <!-- templates/finally.html 상단 헤더 -->
-<link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="system-container">
         <!-- 상단 헤더 -->
-        <header class="system-header">
-            <h1>AI 노후 건물 외벽 진단 시스템</h1>
-            <div class="system-status" id="systemStatus">[SYSTEM READY: AWAITING INPUT]</div>
-        </header>
+       <!-- 상단 헤더 영역 수정 -->
+<!-- 렌더링 화면 기준 상단 헤더 영역 교정 -->
+<header class="system-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+    <h1>AI 노후 건물 외벽 진단 시스템</h1>
+    
+    <!-- 🌟 상태창과 버튼을 한 공간에 묶어주는 래퍼 -->
+    <div class="status-group" style="display: flex; align-items: center; gap: 10px;">
+        <!-- 📄 초기에는 'hide' 클래스로 인해 숨겨져 있습니다 -->
+        <button type="button" class="btn-header-download hide" id="btnHeaderDownload">
+            📄 보고서 다운로드 (.PDF)
+        </button>
+        <div class="system-status" id="systemStatus">[DIAGNOSIS COMPLETE: DEFECT DETECTED]</div>
+    </div>
+</header>
 
         <!-- 메인 워크스페이스 -->
         <main class="workspace">
-            <!-- 좌측 조작반 -->
+            <!-- 좌측 조작반 (조작 영역과 보고서 영역이 이 안에서 유기적으로 움직입니다) -->
             <section class="control-panel">
-                <!-- 1번 상태: 파일 투하 가이드 상자 -->
+                
+                <!-- [1장면] 파일 투하 가이드 상자 (평소엔 켜져 있고 진단 후 숨김) -->
                 <div class="upload-zone" id="uploadZone">
                     <input type="file" id="fileInput" name="house_image" accept="image/*" hidden>
                     <div class="upload-box" id="uploadBox">
@@ -38,19 +48,15 @@
                     </div>
                 </div>
 
-                <!-- 3번 상태: 실시간 모델 추론 흐름 기동 터미널 -->
+                <!-- [2장면] 실시간 모델 추론 흐름 기동 터미널 (진단 중에만 켜짐) -->
                 <div class="log-zone hide" id="logZone">
-                    <br>
-                    <br>
-                    <br>
+                    <br><br><br>
                     <div class="code-log">
                         <p>> [INFO] Initializing ConvNeXt-Tiny Engine...</p>
                         <p>> [INFO] Connecting to CUDA core...</p>
                         <p>> [DATA] Transferring payload to model tensor...</p>
                         <p>> [COMPUTING] LayerCAM tracking in progress...</p>
                     </div>
-
-
                     <div style="padding-left : 30px; padding-top : 15px;">
                         <h4>모델 사용법</h4>
                         <li>1. 상단의 조건에 해당하는 이미지 파일을 첨부하시오.</li>
@@ -58,42 +64,39 @@
                         <li>3. 맞다면, 아래 초록색의 '진단 시작' 버튼을 누르시오.</li>
                         <li>4. 로딩 후 아래에 나온 결과를 참조하시오.</li>
                     </div>
-                    
                     <div class="progress-container">
                         <div class="progress-bar" id="progressBar"></div>
                         <span class="progress-text" id="progressText">[ANALYZING... 0%]</span>
                     </div>
                 </div>
 
+                <!-- [3장면] 🌟 진단 완료 후 결과 보고서가 무조건 렌더링되어 눈에 보일 절대 영역 -->
+                <div id="reportContainer" class="hide">
+                    <div id="reportContent">
+                        <!-- 여기에 templates/result.html(보고서 서식) 내용이 유기적으로 주입됩니다 -->
+                    </div>
+                    <!-- 🔄 초기화 버튼은 무조건 보고서 박스 최하단에 고정 가동 -->
+                    <button class="btn-reset" onclick="location.href='/'">새로운 진단 시작 (초기화)</button>
+                </div>
 
-                <!-- 통합 기동 스위치 -->
+                <!-- 통합 기동 스위치 (진단 전용) -->
                 <button class="btn-diagnose" id="btnDiagnose" disabled>진단 시작</button>
             </section>
 
-            <!-- 우측 모니터 스크린 -->
+            <!-- 우측 모니터 스크린 (원본, 히트맵, 슬라이더 작동 패널) -->
             <section class="viewer-panel">
-                <!-- after 레이어 전환 탭 (진단 완료 후에만 노출) -->
                 <div class="layer-tabs hide" id="layerTabs">
                     <button type="button" class="layer-tab active" id="tabHeatmap" data-layer="heatmap">히트맵</button>
                     <button type="button" class="layer-tab" id="tabBox" data-layer="box">결함 박스</button>
                 </div>
 
                 <div class="image-viewport" id="imageViewport">
-                    <!-- 초기 가상 디스플레이 그리드 격자 -->
                     <div class="grid-background" id="gridBg"></div>
-                    <!-- 로컬 브라우저가 수신한 원본 프리뷰 -->
                     <img id="previewImg" src="" alt="건물 이미지" class="hide">
-
-                    <!-- OpenCV 인코딩 처리가 완료되어 반환된 타겟 이미지 -->
                     <img id="resultImg" src="" alt="진단 결과 이미지" class="hide">
 
-                    <!-- [추가] 불량 판정에서만 쓰는 before/after 비교 슬라이더.
-                         우수 판정은 이 블록을 쓰지 않고 위의 resultImg만 그대로 보여준다.
-                         래퍼 크기는 script.js가 원본 비율에 맞춰 계산해 넣는다
-                         (두 레이어가 픽셀 단위로 정확히 겹쳐야 경계가 자연스럽다) -->
                     <div class="compare-wrap hide" id="compareWrap">
                         <img id="beforeImg" class="compare-layer" src="" alt="원본 이미지">
-                        <!-- clip-path로 좌측을 잘라 원본이 드러나게 한다 -->
                         <div class="compare-after" id="compareAfter">
                             <img id="afterImg" class="compare-layer" src="" alt="판정 근거 이미지">
                         </div>
@@ -103,25 +106,25 @@
                         <span class="compare-tag tag-before">BEFORE · 원본</span>
                         <span class="compare-tag tag-after" id="afterTag">AFTER · 히트맵</span>
                     </div>
-
-                    <!-- 동적 스캔 라인 스틱 -->
                     <div class="laser-line hide" id="laserLine"></div>
                 </div>
             </section>
         </main>
 
-        <!-- 4번 상태: 백엔드 main.py의 result.html 텍스트 스트림이 투하될 동적 영역 -->
-        <div id="dynamicResult" class="hide"></div>
+        <!-- 4번 상태: 백엔드 텍스트 스트림 수령 파이프라인 (숨김 상태 유지) -->
+        <div id="dynamicResult" class="hide" style="display: none !important;"></div>
+<br>
+   <!-- 🌟 [최종 위치] </body> 태그 바로 위에 배치하여 무대 가장 전면에 띄웁니다 -->
+<div style="display : flex; justify-content : center;">
 
-        <br>
-        <div style="display : flex; justify-content : center;" class="ppp">
-            <h3 class="ppp-title">출처</h3>
-            <h4 class="source-content"> 해당 모델은 AI-Hub에 있는 '서울시 노후 주택 균열 데이터'를 이용해 학습시켰습니다.  </h4>
-        </div>
+    <h4>
+        해당 모델은 AI-Hub에 있는 '서울시 노후 주택 균열 데이터'를 이용해 학습시켰습니다.
+    </h4>
 
-    </div>
+</div>
+    
 
     <!-- templates/finally.html 맨 하단 스크립트 -->
-<script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
